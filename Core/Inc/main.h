@@ -205,8 +205,6 @@ void Error_Handler(void);
 #define LCD_INT_GPIO_Port GPIOI
 #define uSD_Detect_Pin GPIO_PIN_15
 #define uSD_Detect_GPIO_Port GPIOI
-#define ARD_D5_PWM_Pin GPIO_PIN_8
-#define ARD_D5_PWM_GPIO_Port GPIOC
 #define ARD_D0_RX_Pin GPIO_PIN_7
 #define ARD_D0_RX_GPIO_Port GPIOC
 #define FMC_A3_Pin GPIO_PIN_3
@@ -283,6 +281,7 @@ void Error_Handler(void);
 #define RMII_REF_CLK_GPIO_Port GPIOA
 #define B_USER_Pin GPIO_PIN_0
 #define B_USER_GPIO_Port GPIOA
+#define B_USER_EXTI_IRQn EXTI0_IRQn
 #define ARD_A1_Pin GPIO_PIN_4
 #define ARD_A1_GPIO_Port GPIOA
 #define RMII_RXD0_Pin GPIO_PIN_4

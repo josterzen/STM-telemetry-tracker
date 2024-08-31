@@ -76,6 +76,13 @@ uint8_t rtext[_MAX_SS];/* File read buffer */
 char timestamp[24];
 bool writeYes = false;
 float engineTemperature;
+bool readTemp = true;
+bool printToWB = false;
+uint32_t milliseconds = 0;
+uint16_t pulseCount = 0;
+uint16_t engineRpm = 0;
+RTC_TimeTypeDef sTime = {0};
+RTC_DateTypeDef sDate = {0};
 
 /* USER CODE END PV */
 
@@ -150,7 +157,11 @@ int main(void)
 
   	}
 
-  	engineTemperature = DS18B20_read_temp_celsius(&temp_sensor);
+  	if(readTemp)
+  	{
+  		engineTemperature = DS18B20_read_temp_celsius(&temp_sensor);
+  		readTemp = false;
+  	}
     if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK)
     {
 		Error_Handler();
@@ -165,10 +176,59 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+		if(readTemp)
+		{
+			engineRpm = pulseCount*60;
+			pulseCount = 0;
+			engineTemperature = DS18B20_read_temp_celsius(&temp_sensor);
+			readTemp = false;
+		}
 		if(MPU6050_DataReady() == 1)
 		{
 			  MPU6050_ProcessData(&MPU6050);
 		}
+		if(printToWB)
+		{
+			HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
+		    HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+
+			milliseconds = ((hrtc.Init.SynchPrediv - sTime.SubSeconds) * 1000) / (hrtc.Init.SynchPrediv + 1);
+			/*int wtext_len = custom_format(wtext, WTEXT_SIZE,
+			                             &sTime.Hours, &sTime.Minutes, &sTime.Seconds, milliseconds,
+			                             MPU6050.acc_x, MPU6050.acc_y, MPU6050.acc_z,
+			                             MPU6050.temperature, MPU6050.gyro_x, MPU6050.gyro_y, MPU6050.gyro_z,
+			                             engineTemperature);*/
+			int wtext_len = snprintf(wtext, WTEXT_SIZE, "%02lu\t%02lu\t%02lu\t%03lu\t%.8f\t%.8f\t%.8f\t%.4f\t%.6f\t%.6f\t%.6f\t%.4f\t%u\n",
+			 sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
+			 MPU6050.acc_x, MPU6050.acc_y, MPU6050.acc_z, MPU6050.temperature, MPU6050.gyro_x, MPU6050.gyro_y, MPU6050.gyro_z,
+			 engineTemperature, engineRpm);
+
+			if (wtext_len < 0) {
+				// Handle buffer overflow error
+				Error_Handler();
+			}
+
+			if ((activeBufferPos + wtext_len) >= BUFFER_SIZE) {
+				//swap active buffers, set wrieYes to true
+				if (writeYes) {
+					Error_Handler();
+				} else {
+					uint8_t *tmpBuff = active_buffer;
+					active_buffer = write_buffer;
+					write_buffer = tmpBuff;
+
+					writeBufferLen = activeBufferPos;
+					activeBufferPos = 0;
+					writeYes = true;
+				}
+			}
+			memcpy(&active_buffer[activeBufferPos], wtext, wtext_len);
+
+			activeBufferPos += wtext_len;
+			memset(wtext, 0, WTEXT_SIZE);
+			printToWB = false;
+		}
+
 		if (writeYes) {
 			// Open the file for appending and writing
 			res = f_open(&SDFile, timestamp, FA_OPEN_APPEND | FA_WRITE);
@@ -215,16 +275,15 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 12;
+  RCC_OscInitStruct.PLL.PLLN = 192;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 8;
   RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -243,7 +302,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
@@ -251,6 +310,10 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
+  /** Enables the Clock Security System
+  */
+  HAL_RCC_EnableCSS();
 }
 
 /* USER CODE BEGIN 4 */
@@ -269,9 +332,9 @@ void GetTimestampFileString(char* timestampStr)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    if (GPIO_Pin == GPIO_PIN_X)
+    if (GPIO_Pin == GPIO_PIN_8)
     {
-        pulse_count++;
+        pulseCount++;
     }
 }
 /* USER CODE END 4 */

@@ -95,7 +95,7 @@ void MPU6050_Initialization(void)
 
 	//Interrupt PIN setting
 	uint8_t INT_LEVEL = 0x0; //0 - active high, 1 - active low
-	uint8_t LATCH_INT_EN = 0x0; //0 - INT 50us pulse, 1 - interrupt clear required
+	uint8_t LATCH_INT_EN = 0x1; //0 - INT 50us pulse, 1 - interrupt clear required
 	uint8_t INT_RD_CLEAR = 0x1; //0 - INT flag cleared by reading INT_STATUS, 1 - INT flag cleared by any read operation
 	MPU6050_Writebyte(MPU6050_INT_PIN_CFG, (INT_LEVEL<<7)|(LATCH_INT_EN<<5)|(INT_RD_CLEAR<<4)); //
 	HAL_Delay(50);

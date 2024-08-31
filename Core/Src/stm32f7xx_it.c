@@ -50,8 +50,6 @@ int custom_format(char *buffer, size_t buffer_size,
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 uint8_t tim3cnt_iter = 0;
-RTC_TimeTypeDef sTime = {0};
-uint32_t milliseconds = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,6 +79,9 @@ extern int activeBufferPos;
 extern int writeBufferLen;
 extern float engineTemperature;
 
+extern bool readTemp;
+extern bool printToWB;
+
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -94,6 +95,7 @@ void NMI_Handler(void)
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
+  HAL_RCC_NMI_IRQHandler();
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
    while (1)
   {
@@ -235,60 +237,48 @@ void RCC_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles EXTI line0 interrupt.
+  */
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+
+  /* USER CODE END EXTI0_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(B_USER_Pin);
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line[9:5] interrupts.
+  */
+void EXTI9_5_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+
+  /* USER CODE END EXTI9_5_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+
+  /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
-  HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
-  milliseconds = ((hrtc.Init.SynchPrediv - sTime.SubSeconds) * 1000) / (hrtc.Init.SynchPrediv + 1);
   if(tim3cnt_iter%100 == 0)
   {
 	  tim3cnt_iter = tim3cnt_iter%100;
-	  engineTemperature = DS18B20_read_temp_celsius(&temp_sensor);
+	  readTemp = true;
   }
-
-
-  /*int wtext_len = snprintf(wtext, WTEXT_SIZE, "%02lu\t%02lu\t%02lu\t%03lu\t%.8f\t%.8f\t%.8f\t%.4f\t%.6f\t%.6f\t%.6f\t%.4f\n",
-		  sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
-		  MPU6050.acc_x, MPU6050.acc_y, MPU6050.acc_z, MPU6050.temperature, MPU6050.gyro_x, MPU6050.gyro_y, MPU6050.gyro_z,
-		  engineTemperature);
-   */
-  int wtext_len = custom_format(wtext, WTEXT_SIZE,
-                             sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
-                             MPU6050.acc_x, MPU6050.acc_y, MPU6050.acc_z,
-                             MPU6050.temperature, MPU6050.gyro_x, MPU6050.gyro_y, MPU6050.gyro_z,
-                             engineTemperature);
-
-  if (wtext_len < 0) {
-      // Handle buffer overflow error
-      Error_Handler();
-  }
-
-  if((activeBufferPos + wtext_len) >= BUFFER_SIZE)
-  {
-	  //swap active buffers, set wrieYes to true
-	  if(writeYes)
-	  {
-		  Error_Handler();
-	  }
-	  else
-	  {
-		  char *tmpBuff = active_buffer ;
-		  active_buffer = write_buffer;
-		  write_buffer = tmpBuff;
-
-		  writeBufferLen = activeBufferPos;
-		  activeBufferPos = 0;
-		  writeYes = true;
-	  }
-  }
-  memcpy(&active_buffer[activeBufferPos], wtext, wtext_len);
-  activeBufferPos += wtext_len;
-
+  printToWB = true;
   tim3cnt_iter +=1;
   /* USER CODE END TIM3_IRQn 1 */
 }
