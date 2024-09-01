@@ -20,18 +20,26 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "dma2d.h"
+#include "dsihost.h"
 #include "fatfs.h"
 #include "i2c.h"
+#include "ltdc.h"
 #include "rtc.h"
 #include "sdmmc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include "fmc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "MPU6050.h"
 #include "ds18b20.h"
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include "stm32f769i_discovery_lcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,11 +54,21 @@ int _write(int file, uint8_t* p, int len)
 }
 
 void GetTimestampFileString(char* timestampStr);
+void UpdateBars(float value1, float value2, float value3);
+void DrawBar(float value, uint16_t originX, uint16_t originY);
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define DISPLAY_WIDTH  800   // Width of the display
+#define DISPLAY_HEIGHT 472   // Height of the display
+#define BAR_WIDTH      720   // Width of the bar
+#define BAR_HEIGHT      20   // Height of the bar
+#define BAR_SPACING     40   // Spacing between bars
+#define BAR_ORIGIN_Y    50   // Y coordinate of the first bar's origin
+#define MARKER_WIDTH     2   // Width of the middle marker
 
 /* USER CODE END PD */
 
@@ -83,6 +101,8 @@ uint16_t pulseCount = 0;
 uint16_t engineRpm = 0;
 RTC_TimeTypeDef sTime = {0};
 RTC_DateTypeDef sDate = {0};
+bool swapBuff = false;
+uint8_t pcnt = 0;
 
 /* USER CODE END PV */
 
@@ -133,9 +153,18 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM3_Init();
   MX_RTC_Init();
+  MX_DMA2D_Init();
+  MX_FMC_Init();
+  MX_LTDC_Init();
+  MX_DSIHOST_DSI_Init();
   /* USER CODE BEGIN 2 */
   MPU6050_Initialization();
   DS18B20_init(&temp_sensor, &htim6, GPIOF, GPIO_PIN_7);
+  BSP_LCD_Init();
+  BSP_LCD_LayerDefaultInit(0, LCD_FB_START_ADDRESS);
+  BSP_LCD_SelectLayer(0);
+  BSP_LCD_Clear(LCD_COLOR_WHITE);
+  BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
   GetTimestampFileString(timestamp);
   memset(wbuff1, 0, BUFFER_SIZE);
   memset(wbuff2, 0, BUFFER_SIZE);
@@ -152,7 +181,7 @@ int main(void)
   		}
   		else
   		{
-  			f_close(&SDFile);
+  			//f_close(&SDFile);
   		}
 
   	}
@@ -198,29 +227,38 @@ int main(void)
 			                             MPU6050.acc_x, MPU6050.acc_y, MPU6050.acc_z,
 			                             MPU6050.temperature, MPU6050.gyro_x, MPU6050.gyro_y, MPU6050.gyro_z,
 			                             engineTemperature);*/
-			int wtext_len = snprintf(wtext, WTEXT_SIZE, "%02lu\t%02lu\t%02lu\t%03lu\t%.8f\t%.8f\t%.8f\t%.4f\t%.6f\t%.6f\t%.6f\t%.4f\t%u\n",
+			/*int wtext_len = snprintf((char*) &wtext, WTEXT_SIZE, "%02u\t%02u\t%02u\t%03lu\t%.8f\t%.8f\t%.8f\t%.4f\t%.6f\t%.6f\t%.6f\t%.4f\t%u\n",
 			 sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
 			 MPU6050.acc_x, MPU6050.acc_y, MPU6050.acc_z, MPU6050.temperature, MPU6050.gyro_x, MPU6050.gyro_y, MPU6050.gyro_z,
-			 engineTemperature, engineRpm);
+			 engineTemperature, engineRpm);*/
+			int wtext_len = snprintf((char*) &wtext, WTEXT_SIZE, "%02u\t%02u\t%02u\t%03lu\t%d\t%d\t%d\t%.4f\t%d\t%d\t%d\t%.4f\t%u\n",
+						 sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
+						 MPU6050.acc_x_raw, MPU6050.acc_y_raw, MPU6050.acc_z_raw, MPU6050.temperature_raw, MPU6050.gyro_x_raw, MPU6050.gyro_y_raw, MPU6050.gyro_z_raw,
+						 engineTemperature, engineRpm);
+
 
 			if (wtext_len < 0) {
 				// Handle buffer overflow error
 				Error_Handler();
 			}
 
-			if ((activeBufferPos + wtext_len) >= BUFFER_SIZE) {
+			if ((activeBufferPos + wtext_len + WTEXT_SIZE) >= BUFFER_SIZE) {
 				//swap active buffers, set wrieYes to true
-				if (writeYes) {
+				/*if (writeYes) {
 					Error_Handler();
 				} else {
+
 					uint8_t *tmpBuff = active_buffer;
+					__disable_irq();
 					active_buffer = write_buffer;
 					write_buffer = tmpBuff;
 
 					writeBufferLen = activeBufferPos;
 					activeBufferPos = 0;
 					writeYes = true;
-				}
+					__enable_irq();
+				}*/
+				swapBuff = true;
 			}
 			memcpy(&active_buffer[activeBufferPos], wtext, wtext_len);
 
@@ -231,8 +269,6 @@ int main(void)
 
 		if (writeYes) {
 			// Open the file for appending and writing
-			res = f_open(&SDFile, timestamp, FA_OPEN_APPEND | FA_WRITE);
-			if (res == FR_OK) {
 				// Write the buffer to the file
 				res = f_write(&SDFile, write_buffer, writeBufferLen,
 						(UINT*) &byteswritten);
@@ -245,14 +281,31 @@ int main(void)
 				memset(write_buffer, 0, BUFFER_SIZE);
 
 				// Close the file
-				f_close(&SDFile);
+				f_sync(&SDFile);
 
 				// Reset the writeYes flag
 				writeYes = false;
-			} else {
-				// Handle file open error
+		}
+		if (swapBuff) {
+			if (writeYes) {
 				Error_Handler();
+			} else {
+
+				uint8_t *tmpBuff = active_buffer;
+				__disable_irq();
+				active_buffer = write_buffer;
+				write_buffer = tmpBuff;
+
+				writeBufferLen = activeBufferPos;
+				activeBufferPos = 0;
+				writeYes = true;
+				__enable_irq();
 			}
+		}
+		if(pcnt%16 == 0)
+		{
+			UpdateBars(MPU6050.gyro_y/180, MPU6050.acc_x/2, engineRpm/7000);
+			pcnt = pcnt%16;
 		}
 	}
   /* USER CODE END 3 */
@@ -280,10 +333,10 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 12;
-  RCC_OscInitStruct.PLL.PLLN = 192;
+  RCC_OscInitStruct.PLL.PLLM = 25;
+  RCC_OscInitStruct.PLL.PLLN = 432;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 8;
+  RCC_OscInitStruct.PLL.PLLQ = 9;
   RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -337,6 +390,48 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         pulseCount++;
     }
 }
+
+void DrawBar(float value, uint16_t originX, uint16_t originY) {
+    uint16_t markerX = originX + BAR_WIDTH / 2;
+    uint16_t fillLength = (uint16_t)(fabsf(value) * (BAR_WIDTH / 2));
+    uint16_t fillStartX;
+
+    // Draw the empty bar outline
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DrawRect(originX, originY, BAR_WIDTH, BAR_HEIGHT);
+
+    // Draw the middle marker
+    BSP_LCD_SetTextColor(LCD_COLOR_RED);
+    BSP_LCD_FillRect(markerX - MARKER_WIDTH / 2, originY, MARKER_WIDTH, BAR_HEIGHT);
+
+    // Draw the fill based on the sign of the value
+    if (value > 0) {
+        fillStartX = markerX;
+        BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
+        BSP_LCD_FillRect(fillStartX, originY, fillLength, BAR_HEIGHT);
+    } else if (value < 0) {
+        fillStartX = markerX - fillLength;
+        BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
+        BSP_LCD_FillRect(fillStartX, originY, fillLength, BAR_HEIGHT);
+    }
+}
+
+void UpdateBars(float value1, float value2, float value3) {
+    // Calculate the horizontal origin to center the bars on the display
+    uint16_t originX = (DISPLAY_WIDTH - BAR_WIDTH) / 2;
+
+    // Clear the area where bars are drawn
+    BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+    BSP_LCD_FillRect(originX, BAR_ORIGIN_Y, BAR_WIDTH, BAR_HEIGHT);
+    BSP_LCD_FillRect(originX, BAR_ORIGIN_Y + BAR_SPACING, BAR_WIDTH, BAR_HEIGHT);
+    BSP_LCD_FillRect(originX, BAR_ORIGIN_Y + 2 * BAR_SPACING, BAR_WIDTH, BAR_HEIGHT);
+
+    // Draw the updated bars
+    DrawBar(value1, originX, BAR_ORIGIN_Y);
+    DrawBar(value2, originX, BAR_ORIGIN_Y + BAR_SPACING);
+    DrawBar(value3, originX, BAR_ORIGIN_Y + 2 * BAR_SPACING);
+}
+
 /* USER CODE END 4 */
 
 /**

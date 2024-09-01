@@ -363,7 +363,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 16384
 #define WTEXT_SIZE 128
 
 /* USER CODE END Private defines */

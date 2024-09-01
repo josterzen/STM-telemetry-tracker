@@ -19,12 +19,30 @@ void MPU6050_Writebytes(uint8_t reg_addr, uint8_t len, uint8_t* data)
 
 void MPU6050_Readbyte(uint8_t reg_addr, uint8_t* data)
 {
-	HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, reg_addr, I2C_MEMADD_SIZE_8BIT, data, 1, 1);
+	;HAL_StatusTypeDef status = HAL_OK;
+    for (int i = 0; i < 3; i++)
+    {
+    	status = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, reg_addr, I2C_MEMADD_SIZE_8BIT, data, 1, 1);
+    	if(status == HAL_OK) return;
+    	HAL_Delay(10);
+    }
+    MPU6050_Reset();
+    HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, reg_addr, I2C_MEMADD_SIZE_8BIT, data, 1, 1);
+    if(status == HAL_OK) return;
 }
 
 void MPU6050_Readbytes(uint8_t reg_addr, uint8_t len, uint8_t* data)
 {
-	HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, reg_addr, I2C_MEMADD_SIZE_8BIT, data, len, 1);
+    HAL_StatusTypeDef status = HAL_OK;
+    for (int i = 0; i < 3; i++)
+    {
+    	status = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, reg_addr, I2C_MEMADD_SIZE_8BIT, data, len, 1);
+    	if(status == HAL_OK) return;
+    	HAL_Delay(10);
+    }
+    MPU6050_Reset();
+    status = HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, reg_addr, I2C_MEMADD_SIZE_8BIT, data, len, 1);
+    if(status == HAL_OK) return;
 }
 
 void MPU6050_Initialization(void)
@@ -62,7 +80,7 @@ void MPU6050_Initialization(void)
 	//Sample rate divider
 	/*Sample Rate = Gyroscope Output Rate / (1 + SMPRT_DIV) */
 	//	MPU6050_Writebyte(MPU6050_SMPRT_DIV, 0x00); // ACC output rate is 1kHz, GYRO output rate is 8kHz
-	MPU6050_Writebyte(MPU6050_SMPRT_DIV, 7); // Sample Rate = 1kHz
+	MPU6050_Writebyte(MPU6050_SMPRT_DIV, 79); // Sample Rate = 100Hz
 	HAL_Delay(50);
 
 	//FSYNC and DLPF setting
@@ -77,7 +95,7 @@ void MPU6050_Initialization(void)
 	  2		+-1000 degree/s
 	  3		+-2000 degree/s	*/
 	uint8_t FS_SCALE_GYRO = 0x0;
-	MPU6050_Writebyte(MPU6050_GYRO_CONFIG, FS_SCALE_GYRO<<1);
+	MPU6050_Writebyte(MPU6050_GYRO_CONFIG, FS_SCALE_GYRO<<0);
 	HAL_Delay(50);
 
 	//ACCEL FULL SCALE setting
@@ -87,7 +105,7 @@ void MPU6050_Initialization(void)
 	  2		+-8g
 	  3		+-16g	*/
 	uint8_t FS_SCALE_ACC = 0x0;
-	MPU6050_Writebyte(MPU6050_ACCEL_CONFIG, FS_SCALE_ACC<<3);
+	MPU6050_Writebyte(MPU6050_ACCEL_CONFIG, FS_SCALE_ACC<<2);
 	HAL_Delay(50);
 
 	MPU6050_Get_LSB_Sensitivity(FS_SCALE_GYRO, FS_SCALE_ACC);
@@ -113,14 +131,14 @@ void MPU6050_Get6AxisRawData(Struct_MPU6050* mpu6050)
 	uint8_t data[14];
 	MPU6050_Readbytes(MPU6050_ACCEL_XOUT_H, 14, data);
 
-	mpu6050->acc_x_raw = (data[0] << 8) | data[1];
-	mpu6050->acc_y_raw = (data[2] << 8) | data[3];
+	mpu6050->acc_x_raw = (data[0] << 8) | data[1] -6300;
+	mpu6050->acc_y_raw = (data[2] << 8) | data[3] +50;
 	mpu6050->acc_z_raw = (data[4] << 8) | data[5];
 
 	mpu6050->temperature_raw = (data[6] << 8) | data[7];
 
-	mpu6050->gyro_x_raw = ((data[8] << 8) | data[9]);
-	mpu6050->gyro_y_raw = ((data[10] << 8) | data[11]);
+	mpu6050->gyro_x_raw = ((data[8] << 8) | data[9]) -1000;
+	mpu6050->gyro_y_raw = ((data[10] << 8) | data[11]) +10;
 	mpu6050->gyro_z_raw = ((data[12] << 8) | data[13]);
 }
 
@@ -205,4 +223,6 @@ void MPU6050_ProcessData(Struct_MPU6050* mpu6050)
 	MPU6050_DataConvert(mpu6050);
 }
 
-
+void MPU6050_Reset(void) {
+	MPU6050_Writebyte(MPU6050_PWR_MGMT_1, 0x1<<7);
+}

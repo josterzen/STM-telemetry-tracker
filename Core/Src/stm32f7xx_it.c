@@ -62,6 +62,7 @@ uint8_t tim3cnt_iter = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern LTDC_HandleTypeDef hltdc;
 extern DMA_HandleTypeDef hdma_sdmmc2_rx;
 extern DMA_HandleTypeDef hdma_sdmmc2_tx;
 extern SD_HandleTypeDef hsd2;
@@ -309,6 +310,20 @@ void DMA2_Stream5_IRQHandler(void)
   /* USER CODE BEGIN DMA2_Stream5_IRQn 1 */
 
   /* USER CODE END DMA2_Stream5_IRQn 1 */
+}
+
+/**
+  * @brief This function handles LTDC global interrupt.
+  */
+void LTDC_IRQHandler(void)
+{
+  /* USER CODE BEGIN LTDC_IRQn 0 */
+
+  /* USER CODE END LTDC_IRQn 0 */
+  HAL_LTDC_IRQHandler(&hltdc);
+  /* USER CODE BEGIN LTDC_IRQn 1 */
+
+  /* USER CODE END LTDC_IRQn 1 */
 }
 
 /**
