@@ -1,141 +1,86 @@
-#include "ds18b20.h"
 #include "stm32f7xx_hal.h"
 
-/*
-Constructor for temperature sensor object
-@param tim Pointer to hardware timer handle. The timer has to tick every microsecond!
-@param port GPIO port of the sensor pin, e.g. GPIOB
-@param pin GPIO pin number of the sensor pin
-*/
+// Define the GPIO pin and port used for One-Wire communication
+#define DS18B20_PIN GPIO_PIN_6
+#define DS18B20_PORT GPIOB
 
-void DS18B20_init(DS18B20 *sensor, TIM_HandleTypeDef *tim, GPIO_TypeDef *port, uint16_t pin) {
-    sensor->tim = tim;
-    sensor->port = port;
-    sensor->pin = pin;
-    HAL_TIM_Base_Start(sensor->tim);
+// Function to set the GPIO pin state
+void DS18B20_WritePin(GPIO_PinState state) {
+    HAL_GPIO_WritePin(DS18B20_PORT, DS18B20_PIN, state);
 }
 
-/*
-Block for given time in microseconds by waiting for the htim ticks
-*/
-void DS18B20_delay(DS18B20 *sensor, uint16_t us) {
-	__HAL_TIM_SET_COUNTER(sensor->tim, 0);
-	while ((__HAL_TIM_GET_COUNTER(sensor->tim))<us);
+// Function to read the GPIO pin state
+GPIO_PinState DS18B20_ReadPin(void) {
+    return HAL_GPIO_ReadPin(DS18B20_PORT, DS18B20_PIN);
 }
 
-void DS18B20_set_data_pin(DS18B20 *sensor, bool on) {
-    HAL_GPIO_WritePin(sensor->port, sensor->pin, on ? GPIO_PIN_SET : GPIO_PIN_RESET);
+// Delay function using TIM7 (with 1MHz clock, so 1 tick = 1 µs)
+extern TIM_HandleTypeDef htim7;
+
+void Delay_us(uint16_t us) {
+    __HAL_TIM_SET_COUNTER(&htim7, 0);  // Set the timer counter to 0
+    while (__HAL_TIM_GET_COUNTER(&htim7) < us);  // Wait until the counter reaches the specified value
 }
 
-void DS18B20_toggle_data_pin(DS18B20 *sensor) {
-    HAL_GPIO_TogglePin(sensor->port, sensor->pin);
+// 1-Wire reset pulse function
+uint8_t OneWire_Reset(void) {
+    uint8_t response;
+
+    DS18B20_WritePin(GPIO_PIN_RESET);  // Pull the One-Wire line low
+    Delay_us(480);                      // Wait for 480 µs
+    DS18B20_WritePin(GPIO_PIN_SET);    // Release the line
+    Delay_us(80);                       // Wait for 80 µs
+
+    response = DS18B20_ReadPin();       // Check if DS18B20 pulls the line low
+    Delay_us(400);                      // Wait for the rest of the timeslot
+
+    return response == GPIO_PIN_RESET ? 1 : 0;  // 1 = presence detected, 0 = no device
 }
 
-GPIO_PinState DS18B20_read_data_pin(DS18B20 *sensor) {
-    return HAL_GPIO_ReadPin(sensor->port, sensor->pin);
+// Function to write one bit to the DS18B20
+void OneWire_WriteBit(uint8_t bit) {
+    if (bit) {
+        DS18B20_WritePin(GPIO_PIN_RESET); // Pull the line low
+        Delay_us(1);                      // Wait for 1 µs
+        DS18B20_WritePin(GPIO_PIN_SET);  // Release the line
+        Delay_us(60);                     // Wait for the rest of the timeslot (60 µs)
+    } else {
+        DS18B20_WritePin(GPIO_PIN_RESET); // Pull the line low
+        Delay_us(60);                     // Keep the line low for 60 µs
+        DS18B20_WritePin(GPIO_PIN_SET);  // Release the line
+    }
 }
 
-void DS18B20_set_pin_output(DS18B20 *sensor) {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = sensor->pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(sensor->port, &GPIO_InitStruct);
+// Function to read one bit from the DS18B20
+uint8_t OneWire_ReadBit(void) {
+    uint8_t bit;
+
+    DS18B20_WritePin(GPIO_PIN_RESET); // Pull the line low
+    Delay_us(1);                      // Wait for 1 µs
+    DS18B20_WritePin(GPIO_PIN_SET);  // Release the line
+    Delay_us(14);                     // Wait for the DS18B20 to pull the line low
+    bit = DS18B20_ReadPin();          // Read the bit value
+    Delay_us(45);                     // Wait for the rest of the timeslot (45 µs)
+
+    return bit;
 }
 
-void DS18B20_set_pin_input(DS18B20 *sensor) {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = sensor->pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    HAL_GPIO_Init(sensor->port, &GPIO_InitStruct);
+// Function to write one byte to the DS18B20
+void OneWire_WriteByte(uint8_t byte) {
+    for (uint8_t i = 0; i < 8; i++) {
+        OneWire_WriteBit(byte & 0x01);  // Write LSB first
+        byte >>= 1;                     // Shift right for the next bit
+    }
 }
 
-uint8_t DS18B20_Start (DS18B20 *sensor)
-{
-	uint8_t response = 0;
-	DS18B20_set_pin_output(sensor);   // set the pin as output
-	DS18B20_set_data_pin(sensor, false);  // pull the pin low
-	DS18B20_delay(sensor, 480);   // delay according to datasheet
-
-	DS18B20_set_pin_input(sensor);    // set the pin as input
-	DS18B20_delay(sensor, 80);    // delay according to datasheet
-	if (!(DS18B20_read_data_pin(sensor))) response = 1;    // if the pin is low i.e the presence pulse is detected
-	else response = -1;
-
-	DS18B20_delay(sensor, 400); // 480 us delay totally.
-
-	return response;
-}
-
-void DS18B20_Write (DS18B20 *sensor, uint8_t data)
-{
-	DS18B20_set_pin_output(sensor);  // set as output
-
-	for (int i=0; i<8; i++)
-	{
-		if ((data & (1<<i))!=0)  // if the bit is high
-		{
-			// write 1
-			DS18B20_set_pin_output(sensor);  // set as output
-			DS18B20_set_data_pin(sensor, false);  // pull the pin LOW
-			DS18B20_delay(sensor, 1);  // wait for 1 us
-
-			DS18B20_set_pin_input(sensor);  // set as input
-			DS18B20_delay(sensor, 50);  // wait for 60 us
-		}
-
-		else  // if the bit is low
-		{
-			// write 0
-			DS18B20_set_pin_output(sensor);
-			DS18B20_set_data_pin(sensor, 0);  // pull the pin LOW
-			DS18B20_delay(sensor, 50);  // wait for 60 us
-
-			DS18B20_set_pin_input(sensor);
-		}
-	}
-}
-
-uint8_t DS18B20_Read(DS18B20 *sensor)
-{
-	uint8_t value=0;
-	DS18B20_set_pin_input(sensor);
-
-	for (int i=0;i<8;i++)
-	{
-		DS18B20_set_pin_output(sensor);   // set as output
-		DS18B20_set_data_pin(sensor, 0);  // pull the data pin LOW
-		DS18B20_delay(sensor, 2);  // wait for 2 us
-		DS18B20_set_pin_input(sensor);
-		if (DS18B20_read_data_pin(sensor))  // if the pin is HIGH
-		{
-			value |= 1<<i;  // read = 1
-		}
-		DS18B20_delay(sensor, 60);  // wait for 60 us
-	}
-	return value;
-}
-
-
-/*
-Read the current temperature from the sensor.
-This functions blocks for around 800ms as it waits for the conversion time!
-@return Temperature in degrees Celsius
-*/
-float DS18B20_read_temp_celsius(DS18B20 *sensor) {
-	uint8_t presence = DS18B20_Start(sensor);
-	DS18B20_Write(sensor, 0xCC);  // skip ROM
-	DS18B20_Write(sensor, 0x44);  // convert t
-
-	presence = DS18B20_Start(sensor);
-	DS18B20_Write(sensor, 0xCC);  // skip ROM
-	DS18B20_Write(sensor, 0xBE);  // Read Scratch-pad
-
-	uint8_t temp_byte1 = DS18B20_Read(sensor);
-	uint8_t temp_byte2 = DS18B20_Read(sensor);
-	uint16_t TEMP = ((temp_byte2<<8))|temp_byte1;
-	float temperature = (float)TEMP/16.0;
-	return temperature;
+// Function to read one byte from the DS18B20
+uint8_t OneWire_ReadByte(void) {
+    uint8_t byte = 0;
+    for (uint8_t i = 0; i < 8; i++) {
+        byte >>= 1;                     // Shift right to make room for the next bit
+        if (OneWire_ReadBit()) {
+            byte |= 0x80;               // If the bit is '1', set the MSB
+        }
+    }
+    return byte;
 }

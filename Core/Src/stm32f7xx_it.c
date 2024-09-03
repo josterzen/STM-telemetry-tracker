@@ -6,12 +6,13 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2024 STMicroelectronics.
-  * All rights reserved.
+  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
@@ -22,10 +23,7 @@
 #include "stm32f7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "MPU6050.h"
-#include "ds18b20.h"
-#include "fatfs.h"
-#include "rtc.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,11 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-int custom_format(char *buffer, size_t buffer_size,
-                  uint32_t hours, uint32_t minutes, uint32_t seconds, uint32_t milliseconds,
-                  float acc_x, float acc_y, float acc_z,
-                  float temperature, float gyro_x, float gyro_y, float gyro_z,
-                  float engineTemperature);
+ 
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,6 +44,7 @@ int custom_format(char *buffer, size_t buffer_size,
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 uint8_t tim3cnt_iter = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,30 +54,24 @@ uint8_t tim3cnt_iter = 0;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern DMA2D_HandleTypeDef hdma2d;
+extern DSI_HandleTypeDef hdsi;
+extern I2C_HandleTypeDef hi2c4;
 extern LTDC_HandleTypeDef hltdc;
 extern DMA_HandleTypeDef hdma_sdmmc2_rx;
 extern DMA_HandleTypeDef hdma_sdmmc2_tx;
 extern SD_HandleTypeDef hsd2;
 extern TIM_HandleTypeDef htim3;
-/* USER CODE BEGIN EV */
-extern DS18B20 temp_sensor;
-extern FRESULT res;
-extern uint32_t byteswritten, bytesread;
-extern uint8_t wtext[];
-extern uint8_t rtext[_MAX_SS];
-extern bool writeYes;
-extern char *active_buffer;
-extern char *write_buffer;
-extern int activeBufferPos;
-extern int writeBufferLen;
-extern float engineTemperature;
+extern TIM_HandleTypeDef htim7;
+extern TIM_HandleTypeDef htim6;
 
+/* USER CODE BEGIN EV */
 extern bool readTemp;
 extern bool printToWB;
-
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -98,9 +87,7 @@ void NMI_Handler(void)
   /* USER CODE END NonMaskableInt_IRQn 0 */
   HAL_RCC_NMI_IRQHandler();
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
-   while (1)
-  {
-  }
+
   /* USER CODE END NonMaskableInt_IRQn 1 */
 }
 
@@ -165,19 +152,6 @@ void UsageFault_Handler(void)
 }
 
 /**
-  * @brief This function handles System service call via SWI instruction.
-  */
-void SVC_Handler(void)
-{
-  /* USER CODE BEGIN SVCall_IRQn 0 */
-
-  /* USER CODE END SVCall_IRQn 0 */
-  /* USER CODE BEGIN SVCall_IRQn 1 */
-
-  /* USER CODE END SVCall_IRQn 1 */
-}
-
-/**
   * @brief This function handles Debug monitor.
   */
 void DebugMon_Handler(void)
@@ -190,33 +164,6 @@ void DebugMon_Handler(void)
   /* USER CODE END DebugMonitor_IRQn 1 */
 }
 
-/**
-  * @brief This function handles Pendable request for system service.
-  */
-void PendSV_Handler(void)
-{
-  /* USER CODE BEGIN PendSV_IRQn 0 */
-
-  /* USER CODE END PendSV_IRQn 0 */
-  /* USER CODE BEGIN PendSV_IRQn 1 */
-
-  /* USER CODE END PendSV_IRQn 1 */
-}
-
-/**
-  * @brief This function handles System tick timer.
-  */
-void SysTick_Handler(void)
-{
-  /* USER CODE BEGIN SysTick_IRQn 0 */
-
-  /* USER CODE END SysTick_IRQn 0 */
-  HAL_IncTick();
-  /* USER CODE BEGIN SysTick_IRQn 1 */
-
-  /* USER CODE END SysTick_IRQn 1 */
-}
-
 /******************************************************************************/
 /* STM32F7xx Peripheral Interrupt Handlers                                    */
 /* Add here the Interrupt Handlers for the used peripherals.                  */
@@ -225,52 +172,12 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles RCC global interrupt.
-  */
-void RCC_IRQHandler(void)
-{
-  /* USER CODE BEGIN RCC_IRQn 0 */
-
-  /* USER CODE END RCC_IRQn 0 */
-  /* USER CODE BEGIN RCC_IRQn 1 */
-
-  /* USER CODE END RCC_IRQn 1 */
-}
-
-/**
-  * @brief This function handles EXTI line0 interrupt.
-  */
-void EXTI0_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI0_IRQn 0 */
-
-  /* USER CODE END EXTI0_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(B_USER_Pin);
-  /* USER CODE BEGIN EXTI0_IRQn 1 */
-
-  /* USER CODE END EXTI0_IRQn 1 */
-}
-
-/**
-  * @brief This function handles EXTI line[9:5] interrupts.
-  */
-void EXTI9_5_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-
-  /* USER CODE END EXTI9_5_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
-  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
-
-  /* USER CODE END EXTI9_5_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
+
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
@@ -281,7 +188,36 @@ void TIM3_IRQHandler(void)
   }
   printToWB = true;
   tim3cnt_iter +=1;
+
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM6 global interrupt, DAC1 and DAC2 underrun error interrupts.
+  */
+void TIM6_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+
+  /* USER CODE END TIM6_DAC_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim6);
+  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+
+  /* USER CODE END TIM6_DAC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM7 global interrupt.
+  */
+void TIM7_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM7_IRQn 0 */
+
+  /* USER CODE END TIM7_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim7);
+  /* USER CODE BEGIN TIM7_IRQn 1 */
+
+  /* USER CODE END TIM7_IRQn 1 */
 }
 
 /**
@@ -327,6 +263,48 @@ void LTDC_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles DMA2D global interrupt.
+  */
+void DMA2D_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2D_IRQn 0 */
+
+  /* USER CODE END DMA2D_IRQn 0 */
+  HAL_DMA2D_IRQHandler(&hdma2d);
+  /* USER CODE BEGIN DMA2D_IRQn 1 */
+
+  /* USER CODE END DMA2D_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C4 event interrupt.
+  */
+void I2C4_EV_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C4_EV_IRQn 0 */
+
+  /* USER CODE END I2C4_EV_IRQn 0 */
+  HAL_I2C_EV_IRQHandler(&hi2c4);
+  /* USER CODE BEGIN I2C4_EV_IRQn 1 */
+
+  /* USER CODE END I2C4_EV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DSI global interrupt.
+  */
+void DSI_IRQHandler(void)
+{
+  /* USER CODE BEGIN DSI_IRQn 0 */
+  
+  /* USER CODE END DSI_IRQn 0 */
+  HAL_DSI_IRQHandler(&hdsi);
+  /* USER CODE BEGIN DSI_IRQn 1 */
+
+  /* USER CODE END DSI_IRQn 1 */
+}
+
+/**
   * @brief This function handles SDMMC2 global interrupt.
   */
 void SDMMC2_IRQHandler(void)
@@ -341,95 +319,5 @@ void SDMMC2_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-// Helper function to convert an integer to a string
-int int_to_str(char *buffer, uint32_t value) {
-    int length = 0;
-    char temp[10]; // Temporary buffer for reversing
 
-    if (value == 0) {
-        buffer[length++] = '0';
-    } else {
-        while (value != 0) {
-            temp[length++] = (value % 10) + '0';
-            value /= 10;
-        }
-
-        // Reverse the string
-        for (int i = 0; i < length; ++i) {
-            buffer[i] = temp[length - i - 1];
-        }
-    }
-
-    buffer[length] = '\0';
-    return length;
-}
-
-// Helper function to convert a float to a string with specific precision
-int float_to_str(char *buffer, float value, int precision) {
-    int length = 0;
-
-    if (value < 0) {
-        buffer[length++] = '-';
-        value = -value;
-    }
-
-    // Handle the integer part
-    uint32_t int_part = (uint32_t)value;
-    length += int_to_str(&buffer[length], int_part);
-
-    buffer[length++] = '.';
-
-    // Handle the fractional part
-    float frac_part = value - int_part;
-    for (int i = 0; i < precision; ++i) {
-        frac_part *= 10;
-        buffer[length++] = ((int)frac_part % 10) + '0';
-    }
-
-    buffer[length] = '\0';
-    return length;
-}
-
-// Main function to format data
-int custom_format(char *buffer, size_t buffer_size,
-                  uint32_t hours, uint32_t minutes, uint32_t seconds, uint32_t milliseconds,
-                  float acc_x, float acc_y, float acc_z,
-                  float temperature, float gyro_x, float gyro_y, float gyro_z,
-                  float engineTemperature) {
-    int offset = 0;
-
-    // Format integers (hours, minutes, seconds, milliseconds)
-    offset += int_to_str(buffer + offset, hours);
-    buffer[offset++] = '\t';
-    offset += int_to_str(buffer + offset, minutes);
-    buffer[offset++] = '\t';
-    offset += int_to_str(buffer + offset, seconds);
-    buffer[offset++] = '\t';
-    offset += int_to_str(buffer + offset, milliseconds);
-    buffer[offset++] = '\t';
-
-    // Format floats (accelerometer, temperature, gyroscope, engine temperature)
-    offset += float_to_str(buffer + offset, acc_x, 8);
-    buffer[offset++] = '\t';
-    offset += float_to_str(buffer + offset, acc_y, 8);
-    buffer[offset++] = '\t';
-    offset += float_to_str(buffer + offset, acc_z, 8);
-    buffer[offset++] = '\t';
-    offset += float_to_str(buffer + offset, temperature, 4);
-    buffer[offset++] = '\t';
-    offset += float_to_str(buffer + offset, gyro_x, 6);
-    buffer[offset++] = '\t';
-    offset += float_to_str(buffer + offset, gyro_y, 6);
-    buffer[offset++] = '\t';
-    offset += float_to_str(buffer + offset, gyro_z, 6);
-    buffer[offset++] = '\t';
-    offset += float_to_str(buffer + offset, engineTemperature, 4);
-    buffer[offset++] = '\n';
-
-    if (offset >= buffer_size) {
-        return -1;  // Buffer overflow
-    }
-
-    return offset;
-}
 /* USER CODE END 1 */

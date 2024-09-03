@@ -1,0 +1,244 @@
+{
+  "Application": {
+    "Screens": [
+      {
+        "Name": "Screen1",
+        "Components": [
+          {
+            "Type": "Image",
+            "Name": "image1",
+            "Width": 800,
+            "Height": 480,
+            "RelativeFilename": "__generated\\alternate_theme_images_backgrounds_800x480_rays.png"
+          },
+          {
+            "Type": "TextArea",
+            "Name": "accely_text",
+            "X": 262,
+            "Y": 251,
+            "Width": 277,
+            "Height": 24,
+            "TextId": "__SingleUse_KZQU",
+            "TextRotation": "0",
+            "AutoSize": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "gy_text",
+            "X": 270,
+            "Y": 91,
+            "Width": 261,
+            "Height": 24,
+            "TextId": "__SingleUse_VLFO",
+            "TextRotation": "0",
+            "AutoSize": true
+          },
+          {
+            "Type": "BoxProgress",
+            "Name": "gyplus_bar",
+            "X": 400,
+            "Y": 131,
+            "Width": 300,
+            "Height": 18,
+            "Color": {
+              "Red": 255
+            },
+            "Direction": "Right",
+            "FileNameBackground": "__generated\\alternate_theme_images_widgets_boxprogress_thick_medium.png",
+            "IndicatorPositionWidth": 300,
+            "IndicatorPositionHeight": 18,
+            "ProgressRangeMax": 100,
+            "ProgressInitialValue": 60
+          },
+          {
+            "Type": "BoxProgress",
+            "Name": "gyminus_bar",
+            "X": 100,
+            "Y": 131,
+            "Width": 300,
+            "Height": 18,
+            "Color": {
+              "Red": 255
+            },
+            "Direction": "Left",
+            "FileNameBackground": "__generated\\alternate_theme_images_widgets_boxprogress_thick_medium.png",
+            "IndicatorPositionWidth": 300,
+            "IndicatorPositionHeight": 18,
+            "ProgressRangeMax": 100,
+            "ProgressInitialValue": 60
+          },
+          {
+            "Type": "BoxProgress",
+            "Name": "accelyplus_bar",
+            "X": 400,
+            "Y": 291,
+            "Width": 300,
+            "Height": 18,
+            "Color": {
+              "Red": 255
+            },
+            "Direction": "Right",
+            "FileNameBackground": "__generated\\alternate_theme_images_widgets_boxprogress_thick_medium.png",
+            "IndicatorPositionWidth": 300,
+            "IndicatorPositionHeight": 18,
+            "ProgressRangeMax": 100,
+            "ProgressInitialValue": 60
+          },
+          {
+            "Type": "BoxProgress",
+            "Name": "accelyminus_bar",
+            "X": 100,
+            "Y": 291,
+            "Width": 300,
+            "Height": 18,
+            "Color": {
+              "Red": 255
+            },
+            "Direction": "Left",
+            "FileNameBackground": "__generated\\alternate_theme_images_widgets_boxprogress_thick_medium.png",
+            "IndicatorPositionWidth": 300,
+            "IndicatorPositionHeight": 18,
+            "ProgressRangeMax": 100,
+            "ProgressInitialValue": 60
+          },
+          {
+            "Type": "TextArea",
+            "Name": "accelx_text",
+            "X": 262,
+            "Y": 331,
+            "Width": 277,
+            "Height": 24,
+            "TextId": "__SingleUse_R6GN",
+            "TextRotation": "0",
+            "AutoSize": true
+          },
+          {
+            "Type": "BoxProgress",
+            "Name": "accelxplus_bar",
+            "X": 400,
+            "Y": 371,
+            "Width": 300,
+            "Height": 18,
+            "Color": {
+              "Red": 255
+            },
+            "Direction": "Right",
+            "FileNameBackground": "__generated\\alternate_theme_images_widgets_boxprogress_thick_medium.png",
+            "IndicatorPositionWidth": 300,
+            "IndicatorPositionHeight": 18,
+            "ProgressRangeMax": 100,
+            "ProgressInitialValue": 60
+          },
+          {
+            "Type": "BoxProgress",
+            "Name": "accelxminus_bar",
+            "X": 100,
+            "Y": 371,
+            "Width": 300,
+            "Height": 18,
+            "Color": {
+              "Red": 255
+            },
+            "Direction": "Left",
+            "FileNameBackground": "__generated\\alternate_theme_images_widgets_boxprogress_thick_medium.png",
+            "IndicatorPositionWidth": 300,
+            "IndicatorPositionHeight": 18,
+            "ProgressRangeMax": 100,
+            "ProgressInitialValue": 60
+          },
+          {
+            "Type": "TextArea",
+            "Name": "enginerpm_text",
+            "X": 342,
+            "Y": 171,
+            "Width": 116,
+            "Height": 24,
+            "TextId": "__SingleUse_2HQC",
+            "TextRotation": "0",
+            "AutoSize": true
+          },
+          {
+            "Type": "BoxProgress",
+            "Name": "enginerpm_bar",
+            "X": 100,
+            "Y": 211,
+            "Width": 600,
+            "Height": 18,
+            "Color": {
+              "Red": 255
+            },
+            "Direction": "Right",
+            "FileNameBackground": "slider_long_600.png",
+            "IndicatorPositionWidth": 600,
+            "IndicatorPositionHeight": 18,
+            "ProgressRangeMax": 100,
+            "ProgressInitialValue": 60
+          }
+        ],
+        "Interactions": []
+      }
+    ],
+    "CustomContainerDefinitions": [],
+    "Name": "MyApplication",
+    "Resolution": {
+      "Width": 800,
+      "Height": 480
+    },
+    "SelectedColorDepth": 16,
+    "StartupScreenName": "Screen1",
+    "SelectedStartupLanguage": "GB",
+    "TouchGfxPath": "../Middlewares/ST/touchgfx",
+    "UIPath": ".",
+    "AvailableColorDepths": [
+      16
+    ],
+    "AvailableLCDs": {
+      "24": "LCD24bpp",
+      "16": "LCD16bpp"
+    },
+    "AvailableSections": [
+      "ExtFlashSection",
+      "IntFlashSection"
+    ],
+    "AvailableResolutions": [
+      {
+        "Width": 800,
+        "Height": 480
+      }
+    ],
+    "PhysicalButtons": [],
+    "FrameworkFeatures": {
+      "LCD16bpp": {
+        "Id": "LCD16bpp",
+        "IsEnabled": true
+      }
+    },
+    "GenerateAssetsCommand": "make -f simulator/gcc/Makefile assets -j8",
+    "PostGenerateCommand": "touchgfx update_project --project-file=simulator/msvs/Application.vcxproj",
+    "PostGenerateTargetCommand": "touchgfx update_project",
+    "CompileSimulatorCommand": "make -f simulator/gcc/Makefile -j8",
+    "RunSimulatorCommand": "build\\bin\\simulator.exe",
+    "CompileTargetCommandOverride": "make -f ../gcc/Makefile -j8",
+    "FlashTargetCommandOverride": "make -f ../gcc/Makefile flash",
+    "FlashTargetIntCommandOverride": "make -f ../gcc/Makefile intflash",
+    "LandscapeSkinX": 0,
+    "LandscapeSkinY": 0,
+    "PortraitSkinX": 0,
+    "PortraitSkinY": 0,
+    "DisplayOrientation": "Landscape",
+    "Family": "STM32F7",
+    "SubFamily": "STM32F7x9",
+    "Toolchain": "STM32CubeIDE",
+    "Platform": "m7",
+    "ProjectFile": "../STM32F769I_DISCO.ioc",
+    "OptionalComponentsRoot": "../Middlewares/ST/touchgfx_components",
+    "OptionalComponents": [],
+    "AdditionalFeatures": [
+      "CWRVector",
+      "VectorFonts",
+      "Video"
+    ]
+  },
+  "Version": "4.24.0",
+  "CreatedBy": "4.24.0"
+}

@@ -1,0 +1,4 @@
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Middlewares/Third_Party/FatFs/src/option/syscall.c:36:5:ff_cre_syncobj	1
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Middlewares/Third_Party/FatFs/src/option/syscall.c:77:5:ff_del_syncobj	1
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Middlewares/Third_Party/FatFs/src/option/syscall.c:98:5:ff_req_grant	1
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Middlewares/Third_Party/FatFs/src/option/syscall.c:135:6:ff_rel_grant	1

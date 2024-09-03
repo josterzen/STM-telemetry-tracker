@@ -1,0 +1,11 @@
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:11:6:MPU6050_Writebyte	32	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:16:6:MPU6050_Writebytes	24	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:146:6:MPU6050_Get_LSB_Sensitivity	0	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:181:6:MPU6050_DataConvert	0	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:196:5:MPU6050_DataReady	8	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:227:6:MPU6050_Reset	0	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:21:6:MPU6050_Readbyte	40	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:49:6:MPU6050_Initialization	16	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:35:6:MPU6050_Readbytes	48	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:130:6:MPU6050_Get6AxisRawData	24	static
+C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c:221:6:MPU6050_ProcessData	8	static
