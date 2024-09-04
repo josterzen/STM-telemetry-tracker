@@ -24,6 +24,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include "FreeRTOS.h"
+#include "task.h"
+#include "cmsis_os.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -72,6 +75,8 @@ extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 extern bool readTemp;
 extern bool printToWB;
+extern osThreadId_t sensorTaskHandle;
+extern osThreadId_t measureTempHandle;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -180,13 +185,17 @@ void TIM3_IRQHandler(void)
 
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
+
   /* USER CODE BEGIN TIM3_IRQn 1 */
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  vTaskNotifyGiveFromISR(sensorTaskHandle, &xHigherPriorityTaskWoken);
   if(tim3cnt_iter%100 == 0)
   {
-	  tim3cnt_iter = tim3cnt_iter%100;
-	  readTemp = true;
+      vTaskNotifyGiveFromISR(measureTempHandle, &xHigherPriorityTaskWoken);
+	  tim3cnt_iter = 0;
   }
-  printToWB = true;
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   tim3cnt_iter +=1;
 
   /* USER CODE END TIM3_IRQn 1 */

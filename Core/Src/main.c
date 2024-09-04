@@ -156,7 +156,6 @@ RTC_DateTypeDef sDate = {0};
 bool swapBuff = false;
 uint8_t pcnt = 0;
 
-
 osThreadId_t sensorTaskHandle;
 const osThreadAttr_t sensorTaskAttributes = {
         .name = "SensorData",
@@ -328,7 +327,7 @@ int main(void)
   /* add threads, ... */
   mountSDCardHandle = osThreadNew(MountSDCardTask, NULL, &mountSDCardAtributes);
   sensorTaskHandle = osThreadNew(SensorDataTask, NULL, &sensorTaskAttributes);
-  //measureTempHandle = osThreadNew(StartTempTask, NULL, &measureTempAtributes);
+  measureTempHandle = osThreadNew(StartTempTask, NULL, &measureTempAtributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -1824,42 +1823,39 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 void SensorDataTask(void *argument) {
     for (;;) {
-        if (readTemp) {
-            engineRpm = pulseCount * 60;
-            pulseCount = 0;
-            //engineTemperature = DS18B20_read_temp_celsius(&temp_sensor);
-            readTemp = false;
-        }
+
+    	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        engineRpm = pulseCount * 60 *100;
+        pulseCount = 0;
 
         if (MPU6050_DataReady() == 1) {
             MPU6050_ProcessData(&MPU6050);
         }
 
-        if (printToWB) {
-            HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
-            HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
+		HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
-            milliseconds = ((hrtc.Init.SynchPrediv - sTime.SubSeconds) * 1000) / (hrtc.Init.SynchPrediv + 1);
-            // First part: Handling time and accelerometer data
-            int wtext_len = snprintf((char*)&wtext, WTEXT_SIZE, "%02u\t%02u\t%02u\t%03lu\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%u\n",
-                                     sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
-                                     MPU6050.acc_x_raw, MPU6050.acc_y_raw, MPU6050.acc_z_raw, MPU6050.temperature_raw,
-                                     MPU6050.gyro_x_raw, MPU6050.gyro_y_raw, MPU6050.gyro_z_raw,
-                                     engineTemperature, engineRpm);
+		milliseconds = ((hrtc.Init.SynchPrediv - sTime.SubSeconds) * 1000)
+				/ (hrtc.Init.SynchPrediv + 1);
+		// First part: Handling time and accelerometer data
+		int wtext_len = snprintf((char*) &wtext, WTEXT_SIZE,
+				"%02u\t%02u\t%02u\t%03lu\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%u\n",
+				sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
+				MPU6050.acc_x_raw, MPU6050.acc_y_raw, MPU6050.acc_z_raw,
+				MPU6050.temperature_raw, MPU6050.gyro_x_raw, MPU6050.gyro_y_raw,
+				MPU6050.gyro_z_raw, engineTemperature, engineRpm);
 
-            if (wtext_len < 0) {
-                // Handle error
-                Error_Handler();
-            }
+		if (wtext_len < 0) {
+			// Handle error
+			Error_Handler();
+		}
 
-            if ((activeBufferPos + wtext_len + 256) >= BUFFER_SIZE) {
-                swapBuff = true;
-            }
-            memcpy(&active_buffer[activeBufferPos], &wtext, wtext_len);
-            activeBufferPos += wtext_len;
-            memset(&wtext, 0, WTEXT_SIZE);
-            printToWB = false;
-        }
+		if ((activeBufferPos + wtext_len + 256) >= BUFFER_SIZE) {
+			swapBuff = true;
+		}
+		memcpy(&active_buffer[activeBufferPos], &wtext, wtext_len);
+		activeBufferPos += wtext_len;
+		memset(&wtext, 0, WTEXT_SIZE);
 
 
 		if (writeYes) {
@@ -1949,6 +1945,7 @@ void StartTempTask(void *argument) {
 
     for (;;) {
         // Reset pulse
+    	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         presence = OneWire_Reset();
         if (presence) {
             // Send the commands to read the temperature
@@ -1970,8 +1967,6 @@ void StartTempTask(void *argument) {
             // Convert the temperature to Celsius
             engineTemperature = temp;
         }
-
-        vTaskDelay(pdMS_TO_TICKS(1000));  // Read every 1 second
     }
 }
 /* USER CODE END 4 */
