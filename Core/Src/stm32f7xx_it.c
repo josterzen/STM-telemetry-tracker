@@ -73,10 +73,9 @@ extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
-extern bool readTemp;
-extern bool printToWB;
 extern osThreadId_t measureSensorHandle;
 extern osThreadId_t measureTempHandle;
+extern uint16_t pulseCount;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -326,5 +325,13 @@ void SDMMC2_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == GPIO_PIN_8)
+    {
+        pulseCount++;
+    }
+}
 
 /* USER CODE END 1 */

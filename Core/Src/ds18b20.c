@@ -1,6 +1,7 @@
 #include "ds18b20.h"
 #include "stm32f7xx_hal.h"
 #include "cmsis_os.h"
+#include "main.h"
 
 /*
 Constructor for temperature sensor object
@@ -55,7 +56,6 @@ void DS18B20_set_pin_input(DS18B20 *sensor) {
 
 uint8_t DS18B20_Start (DS18B20 *sensor)
 {
-    //taskENTER_CRITICAL();
 	uint8_t response = 0;
 	DS18B20_set_pin_output(sensor);   // set the pin as output
 	DS18B20_set_data_pin(sensor, false);  // pull the pin low
@@ -65,7 +65,6 @@ uint8_t DS18B20_Start (DS18B20 *sensor)
 	DS18B20_delay(sensor, 80);    // delay according to datasheet //100
 	if (!(DS18B20_read_data_pin(sensor))) response = 1;    // if the pin is low i.e the presence pulse is detected
 	else response = -1;
-    //taskEXIT_CRITICAL();
 
 	DS18B20_delay(sensor, 400); // 480 us delay totally.  //600
 
@@ -78,7 +77,6 @@ void DS18B20_Write (DS18B20 *sensor, uint8_t data)
 
 	for (int i=0; i<8; i++)
 	{
-		//taskENTER_CRITICAL();
 		if ((data & (1<<i))!=0)  // if the bit is high
 		{
 			// write 1
@@ -95,7 +93,6 @@ void DS18B20_Write (DS18B20 *sensor, uint8_t data)
 			DS18B20_delay(sensor, 60);  // wait for 60 us
 			DS18B20_set_data_pin(sensor, true);
 		}
-	    //taskEXIT_CRITICAL();
 	}
 }
 
@@ -107,7 +104,6 @@ uint8_t DS18B20_Read(DS18B20 *sensor)
 
 	for (int i=0;i<8;i++)
 	{
-		//taskENTER_CRITICAL();
 		DS18B20_set_pin_output(sensor);   // set as output
 		DS18B20_set_data_pin(sensor, 0);  // pull the data pin LOW
 		DS18B20_delay(sensor, 5);  // wait for 2 us
@@ -118,12 +114,10 @@ uint8_t DS18B20_Read(DS18B20 *sensor)
 		{
 			value |= 1<<i;  // read = 1
 		}
-		//taskEXIT_CRITICAL();
 		DS18B20_delay(sensor, 45);  // wait for 60 us //48
 	}
 	return value;
 }
-
 
 /*
 Read the current temperature from the sensor.

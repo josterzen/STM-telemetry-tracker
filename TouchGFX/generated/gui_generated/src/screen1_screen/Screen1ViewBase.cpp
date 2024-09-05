@@ -30,7 +30,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     gyplus_bar.setXY(400, 91);
     gyplus_bar.setProgressIndicatorPosition(0, 0, 300, 18);
-    gyplus_bar.setRange(0, 100);
+    gyplus_bar.setRange(0, 300);
     gyplus_bar.setDirection(touchgfx::AbstractDirectionProgress::RIGHT);
     gyplus_bar.setBackground(touchgfx::Bitmap(BITMAP_ALTERNATE_THEME_IMAGES_WIDGETS_BOXPROGRESS_THICK_MEDIUM_ID));
     gyplus_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));
@@ -39,7 +39,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     gyminus_bar.setXY(100, 91);
     gyminus_bar.setProgressIndicatorPosition(0, 0, 300, 18);
-    gyminus_bar.setRange(0, 100);
+    gyminus_bar.setRange(0, 300);
     gyminus_bar.setDirection(touchgfx::AbstractDirectionProgress::LEFT);
     gyminus_bar.setBackground(touchgfx::Bitmap(BITMAP_ALTERNATE_THEME_IMAGES_WIDGETS_BOXPROGRESS_THICK_MEDIUM_ID));
     gyminus_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));
@@ -48,7 +48,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     accelyplus_bar.setXY(400, 251);
     accelyplus_bar.setProgressIndicatorPosition(0, 0, 300, 18);
-    accelyplus_bar.setRange(0, 100);
+    accelyplus_bar.setRange(0, 300);
     accelyplus_bar.setDirection(touchgfx::AbstractDirectionProgress::RIGHT);
     accelyplus_bar.setBackground(touchgfx::Bitmap(BITMAP_ALTERNATE_THEME_IMAGES_WIDGETS_BOXPROGRESS_THICK_MEDIUM_ID));
     accelyplus_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));
@@ -57,7 +57,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     accelyminus_bar.setXY(100, 251);
     accelyminus_bar.setProgressIndicatorPosition(0, 0, 300, 18);
-    accelyminus_bar.setRange(0, 100);
+    accelyminus_bar.setRange(0, 300);
     accelyminus_bar.setDirection(touchgfx::AbstractDirectionProgress::LEFT);
     accelyminus_bar.setBackground(touchgfx::Bitmap(BITMAP_ALTERNATE_THEME_IMAGES_WIDGETS_BOXPROGRESS_THICK_MEDIUM_ID));
     accelyminus_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));
@@ -72,7 +72,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     accelxplus_bar.setXY(400, 331);
     accelxplus_bar.setProgressIndicatorPosition(0, 0, 300, 18);
-    accelxplus_bar.setRange(0, 100);
+    accelxplus_bar.setRange(0, 300);
     accelxplus_bar.setDirection(touchgfx::AbstractDirectionProgress::RIGHT);
     accelxplus_bar.setBackground(touchgfx::Bitmap(BITMAP_ALTERNATE_THEME_IMAGES_WIDGETS_BOXPROGRESS_THICK_MEDIUM_ID));
     accelxplus_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));
@@ -81,7 +81,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     accelxminus_bar.setXY(100, 331);
     accelxminus_bar.setProgressIndicatorPosition(0, 0, 300, 18);
-    accelxminus_bar.setRange(0, 100);
+    accelxminus_bar.setRange(0, 300);
     accelxminus_bar.setDirection(touchgfx::AbstractDirectionProgress::LEFT);
     accelxminus_bar.setBackground(touchgfx::Bitmap(BITMAP_ALTERNATE_THEME_IMAGES_WIDGETS_BOXPROGRESS_THICK_MEDIUM_ID));
     accelxminus_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));
@@ -102,7 +102,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     enginerpm_bar.setXY(100, 171);
     enginerpm_bar.setProgressIndicatorPosition(0, 0, 600, 18);
-    enginerpm_bar.setRange(0, 100);
+    enginerpm_bar.setRange(0, 600);
     enginerpm_bar.setDirection(touchgfx::AbstractDirectionProgress::RIGHT);
     enginerpm_bar.setBackground(touchgfx::Bitmap(BITMAP_SLIDER_LONG_600_ID));
     enginerpm_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));
@@ -111,7 +111,7 @@ Screen1ViewBase::Screen1ViewBase()
 
     enginetemp_bar.setXY(100, 411);
     enginetemp_bar.setProgressIndicatorPosition(0, 0, 600, 18);
-    enginetemp_bar.setRange(0, 100);
+    enginetemp_bar.setRange(0, 600);
     enginetemp_bar.setDirection(touchgfx::AbstractDirectionProgress::RIGHT);
     enginetemp_bar.setBackground(touchgfx::Bitmap(BITMAP_SLIDER_LONG_600_ID));
     enginetemp_bar.setColor(touchgfx::Color::getColorFromRGB(255, 0, 0));

@@ -193,8 +193,6 @@ uint8_t rtext[_MAX_SS];/* File read buffer */
 char timestamp[32];
 bool writeYes = false;
 uint16_t engineTemperature;
-bool readTemp = true;
-bool printToWB = false;
 uint32_t milliseconds = 0;
 uint16_t pulseCount = 0;
 uint16_t engineRpm = 0;
@@ -264,6 +262,11 @@ int main(void)
 
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
+
+  /* Enable the CPU Cache */
+
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
 
   /* Enable D-Cache---------------------------------------------------------*/
   SCB_EnableDCache();
@@ -1156,7 +1159,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8|RENDER_TIME_Pin|VSYNC_FREQ_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_7|MCU_ACTIVE_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(MCU_ACTIVE_GPIO_Port, MCU_ACTIVE_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(FRAME_RATE_GPIO_Port, FRAME_RATE_Pin, GPIO_PIN_RESET);
@@ -1188,13 +1191,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PF7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-
   /*Configure GPIO pin : MCU_ACTIVE_Pin */
   GPIO_InitStruct.Pin = MCU_ACTIVE_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -1214,6 +1210,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(FRAME_RATE_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB14 */
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF4_USART1;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -1850,14 +1854,6 @@ void GetTimestampFileString(char* timestampStr)
              sTime.Hours, sTime.Minutes, sTime.Seconds);
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    if (GPIO_Pin == GPIO_PIN_8)
-    {
-        pulseCount++;
-    }
-}
-
 long map(long x, long in_min, long in_max, long out_min, long out_max)
 {
 	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -1961,7 +1957,7 @@ void SensorDataTask(void *argument)
 
 		milliseconds = ((hrtc.Init.SynchPrediv - sTime.SubSeconds) * 1000)
 				/ (hrtc.Init.SynchPrediv + 1);
-		// First part: Handling time and accelerometer data
+
 		int wtext_len = snprintf((char*) &wtext, WTEXT_SIZE,
 				"%02u\t%02u\t%02u\t%03lu\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%u\n",
 				sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
@@ -2039,11 +2035,7 @@ void StartTempTask(void *argument)
   for(;;)
   {
 	  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-	  //taskENTER_CRITICAL();
-	  osKernelLock();
       engineTemperature = DS18B20_read_temp(&temp_sensor);
-	  osKernelUnlock();
-	  //taskEXIT_CRITICAL();
       mappedEngineTemp = map(engineTemperature, 0, 1920/*(120*16)*/, 0, 600);
       osMessageQueuePut(engineTempQueueHandle, &mappedEngineTemp, 0, 0);
   }
@@ -2150,7 +2142,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+	 vTaskEndScheduler();
   /* USER CODE END Error_Handler_Debug */
 }
 

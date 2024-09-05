@@ -188,26 +188,6 @@ void MPU6050_DataConvert(Struct_MPU6050* mpu6050)
 
 int MPU6050_DataReady(void)
 {
-	//old school way
-	/*
-	static uint8_t INT_STATE_FLAG = 0;
-	static uint8_t DATA_RDY_INT_FLAG = 0;
-	static uint8_t INT_PIN = 0;
-	INT_PIN = LL_GPIO_IsInputPinSet(MPU6050_INT_PORT, MPU6050_INT_PIN);
-	if(INT_PIN == 1)
-	{
-		MPU6050_Readbyte(MPU6050_INT_STATUS, &INT_STATE_FLAG); //flag cleared automatically within the sensor
-		DATA_RDY_INT_FLAG = INT_STATE_FLAG & 0x01;
-		if(DATA_RDY_INT_FLAG == 1)
-		{
-			INT_STATE_FLAG = 0; //flag clearing
-			DATA_RDY_INT_FLAG = 0;
-			INT_PIN = 0;
-			return 1;
-		}
-	}
-	return 0;
-	 */
 	return HAL_GPIO_ReadPin(MPU6050_INT_PORT, MPU6050_INT_PIN);
 }
 
