@@ -27,6 +27,12 @@ public:
 
     virtual ~Screen1Presenter() {}
 
+    virtual void setGyro_Y(short value);
+    virtual void setEngine_RPM(short value);
+    virtual void setAcc_Y(short value);
+    virtual void setAcc_X(short value);
+    virtual void setEngine_Temp(short value);
+
 private:
     Screen1Presenter();
 

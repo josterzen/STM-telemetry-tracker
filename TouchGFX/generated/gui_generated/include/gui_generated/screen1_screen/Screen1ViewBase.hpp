@@ -38,8 +38,10 @@ protected:
     touchgfx::TextArea accelx_text;
     touchgfx::BoxProgress accelxplus_bar;
     touchgfx::BoxProgress accelxminus_bar;
+    touchgfx::TextArea enginetemp_text;
     touchgfx::TextArea enginerpm_text;
     touchgfx::BoxProgress enginerpm_bar;
+    touchgfx::BoxProgress enginetemp_bar;
 
 private:
 

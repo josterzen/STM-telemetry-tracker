@@ -11,6 +11,11 @@ public:
     virtual ~Screen1View() {}
     virtual void setupScreen();
     virtual void tearDownScreen();
+    virtual void setGyro_Y(short val);
+    virtual void setAcc_Y(short val);
+    virtual void setAcc_X(short val);
+    virtual void setEngine_RPM(short val);
+    virtual void setEngine_Temp(short val);
 protected:
 };
 

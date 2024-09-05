@@ -131,8 +131,55 @@ const osThreadAttr_t videoTask_attributes = {
   .stack_size = 1000 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for mountSD */
+osThreadId_t mountSDHandle;
+const osThreadAttr_t mountSD_attributes = {
+  .name = "mountSD",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for measureSensor */
+osThreadId_t measureSensorHandle;
+const osThreadAttr_t measureSensor_attributes = {
+  .name = "measureSensor",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for measureTemp */
+osThreadId_t measureTempHandle;
+const osThreadAttr_t measureTemp_attributes = {
+  .name = "measureTemp",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+/* Definitions for gyroYqueue */
+osMessageQueueId_t gyroYqueueHandle;
+const osMessageQueueAttr_t gyroYqueue_attributes = {
+  .name = "gyroYqueue"
+};
+/* Definitions for engineRPMqueue */
+osMessageQueueId_t engineRPMqueueHandle;
+const osMessageQueueAttr_t engineRPMqueue_attributes = {
+  .name = "engineRPMqueue"
+};
+/* Definitions for accYqueue */
+osMessageQueueId_t accYqueueHandle;
+const osMessageQueueAttr_t accYqueue_attributes = {
+  .name = "accYqueue"
+};
+/* Definitions for accXqueue */
+osMessageQueueId_t accXqueueHandle;
+const osMessageQueueAttr_t accXqueue_attributes = {
+  .name = "accXqueue"
+};
+/* Definitions for engineTempQueue */
+osMessageQueueId_t engineTempQueueHandle;
+const osMessageQueueAttr_t engineTempQueue_attributes = {
+  .name = "engineTempQueue"
+};
 /* USER CODE BEGIN PV */
 
+DS18B20 temp_sensor;
 FRESULT res; /* FatFs function common result code */
 uint32_t byteswritten, bytesread; /* File write/read counts */
 uint8_t wtext[WTEXT_SIZE]; /* File write buffer */
@@ -156,25 +203,6 @@ RTC_DateTypeDef sDate = {0};
 bool swapBuff = false;
 uint8_t pcnt = 0;
 
-osThreadId_t sensorTaskHandle;
-const osThreadAttr_t sensorTaskAttributes = {
-        .name = "SensorData",
-        .priority = (osPriority_t) osPriorityNormal,
-        .stack_size = 512 * 4  // 512 words, adjust as necessary
-};
-osThreadId_t mountSDCardHandle;
-const osThreadAttr_t mountSDCardAtributes = {
-        .name = "SensorData",
-        .priority = (osPriority_t) osPriorityNormal,
-        .stack_size = 512 * 4  // 512 words, adjust as necessary
-};
-osThreadId_t measureTempHandle;
-const osThreadAttr_t measureTempAtributes = {
-    .name = "DS18B20Task",
-    .priority = (osPriority_t) osPriorityNormal,
-    .stack_size = 128 * 4
-};
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -196,6 +224,9 @@ static void MX_RTC_Init(void);
 void StartDefaultTask(void *argument);
 extern void TouchGFX_Task(void *argument);
 extern void videoTaskFunc(void *argument);
+void MountSDCardTask(void *argument);
+void SensorDataTask(void *argument);
+void StartTempTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 static void BSP_SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_CommandTypeDef *Command);
@@ -211,15 +242,8 @@ static uint8_t BSP_QSPI_EnableMemoryMappedMode(QSPI_HandleTypeDef *hqspi);
 
 
 void GetTimestampFileString(char* timestampStr);
-void SensorDataTask(void *argument);
-void MountSDCardTask(void *argument);
-void StartTempTask(void *argument);
-void float_to_string(char* buffer, float value, int precision);
-void int_to_string(char* buffer, int value, int width);
-int FormatWtext(char* wtext_buf, uint8_t hours, uint8_t minutes, uint8_t seconds, uint32_t milliseconds,
-                 float acc_x, float acc_y, float acc_z, float temperature,
-                 float gyro_x, float gyro_y, float gyro_z,
-                 float engineTemperature, uint32_t engineRpm);
+long map(long x, long in_min, long in_max, long out_min, long out_max);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -240,11 +264,6 @@ int main(void)
 
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
-
-  /* Enable the CPU Cache */
-
-  /* Enable I-Cache---------------------------------------------------------*/
-  SCB_EnableICache();
 
   /* Enable D-Cache---------------------------------------------------------*/
   SCB_EnableDCache();
@@ -288,7 +307,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   MPU6050_Initialization();
- // DS18B20_init(&temp_sensor, &htim4, GPIOF, GPIO_PIN_7);
+  DS18B20_init(&temp_sensor, &htim7, GPIOF, GPIO_PIN_7);
   GetTimestampFileString(timestamp);
   memset(wbuff1, 0, BUFFER_SIZE);
   memset(wbuff2, 0, BUFFER_SIZE);
@@ -309,6 +328,22 @@ int main(void)
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* creation of gyroYqueue */
+  gyroYqueueHandle = osMessageQueueNew (16, sizeof(uint16_t), &gyroYqueue_attributes);
+
+  /* creation of engineRPMqueue */
+  engineRPMqueueHandle = osMessageQueueNew (16, sizeof(uint16_t), &engineRPMqueue_attributes);
+
+  /* creation of accYqueue */
+  accYqueueHandle = osMessageQueueNew (16, sizeof(uint16_t), &accYqueue_attributes);
+
+  /* creation of accXqueue */
+  accXqueueHandle = osMessageQueueNew (16, sizeof(uint16_t), &accXqueue_attributes);
+
+  /* creation of engineTempQueue */
+  engineTempQueueHandle = osMessageQueueNew (16, sizeof(uint16_t), &engineTempQueue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -323,11 +358,17 @@ int main(void)
   /* creation of videoTask */
   videoTaskHandle = osThreadNew(videoTaskFunc, NULL, &videoTask_attributes);
 
+  /* creation of mountSD */
+  mountSDHandle = osThreadNew(MountSDCardTask, NULL, &mountSD_attributes);
+
+  /* creation of measureSensor */
+  measureSensorHandle = osThreadNew(SensorDataTask, NULL, &measureSensor_attributes);
+
+  /* creation of measureTemp */
+  measureTempHandle = osThreadNew(StartTempTask, NULL, &measureTemp_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  mountSDCardHandle = osThreadNew(MountSDCardTask, NULL, &mountSDCardAtributes);
-  sensorTaskHandle = osThreadNew(SensorDataTask, NULL, &sensorTaskAttributes);
-  measureTempHandle = osThreadNew(StartTempTask, NULL, &measureTempAtributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -397,16 +438,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
-
-  /** Enables the Clock Security System
-  */
-  HAL_RCC_EnableCSS();
 }
 
 /**
@@ -1821,16 +1858,103 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     }
 }
 
-void SensorDataTask(void *argument) {
-    for (;;) {
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+/* USER CODE END 4 */
 
-    	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        engineRpm = pulseCount * 60 *100;
-        pulseCount = 0;
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  for(;;)
+  {
+    osDelay(100);
+  }
+  /* USER CODE END 5 */
+}
 
-        if (MPU6050_DataReady() == 1) {
-            MPU6050_ProcessData(&MPU6050);
-        }
+/* USER CODE BEGIN Header_MountSDCardTask */
+/**
+* @brief Function implementing the MountCardTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_MountSDCardTask */
+void MountSDCardTask(void *argument)
+{
+  /* USER CODE BEGIN MountSDCardTask */
+	res = f_mount(&SDFatFS, (TCHAR const*) SDPath, 1);
+	if (res != FR_OK) {
+		Error_Handler();
+	} else {
+		//Open file for writing (Create)
+		res = f_open(&SDFile, timestamp, FA_CREATE_ALWAYS | FA_WRITE);
+		if (res != FR_OK) {
+			Error_Handler();
+		} else {
+			f_close(&SDFile);
+		}
+
+	}
+
+	if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK) {
+		Error_Handler();
+	}
+
+	vTaskDelete(NULL);
+
+	for (;;) {
+		osDelay(100);
+	}
+
+  /* USER CODE END MountSDCardTask */
+}
+
+/* USER CODE BEGIN Header_SensorDataTask */
+/**
+* @brief Function implementing the MeasureSensor thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_SensorDataTask */
+void SensorDataTask(void *argument)
+{
+  /* USER CODE BEGIN SensorDataTask */
+
+	short mappedEngineRPM;
+	short mappedGyroY;
+	short mappedAccY;
+	short mappedAccX;
+  /* Infinite loop */
+	for (;;) {
+
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		engineRpm = pulseCount * 60 * 100;
+		pulseCount = 0;
+		if (MPU6050_DataReady() == 1) {
+			MPU6050_ProcessData(&MPU6050);
+		}
+
+
+		mappedEngineRPM = map(engineRpm, 0, 8096, 0, 600);
+		mappedGyroY = map(MPU6050.gyro_x_raw, -32768, 32768, -300, 300);
+		mappedAccY = map(MPU6050.acc_y_raw, -32768, 32768, -300, 300);
+		mappedAccX = map(MPU6050.acc_x_raw, -32768, 32768, -300, 300);
+
+		osMessageQueuePut(engineRPMqueueHandle, &mappedEngineRPM, 0, 0);
+		osMessageQueuePut(gyroYqueueHandle, &mappedGyroY, 0, 0);
+		osMessageQueuePut(accYqueueHandle, &mappedAccX, 0, 0);
+		osMessageQueuePut(accXqueueHandle, &mappedAccY, 0, 0);
+
+
 
 		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
 		HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
@@ -1857,7 +1981,6 @@ void SensorDataTask(void *argument) {
 		activeBufferPos += wtext_len;
 		memset(&wtext, 0, WTEXT_SIZE);
 
-
 		if (writeYes) {
 			res = f_open(&SDFile, timestamp, FA_OPEN_APPEND | FA_WRITE);
 			if (res != FR_OK) {
@@ -1872,120 +1995,59 @@ void SensorDataTask(void *argument) {
 				}
 			}
 
-            // Clear the buffer after writing
-            memset(write_buffer, 0, BUFFER_SIZE);
-            f_close(&SDFile);
-            writeYes = false;
-        }
-            if (writeYes) {
-                Error_Handler();
-            } else {
-                uint8_t *tmpBuff = active_buffer;
-                osKernelLock();  // Disable context switching
-                active_buffer = write_buffer;
-                write_buffer = tmpBuff;
+			// Clear the buffer after writing
+			memset(write_buffer, 0, BUFFER_SIZE);
+			f_close(&SDFile);
+			writeYes = false;
+		}
+		if (writeYes) {
+			Error_Handler();
+		} else {
+			uint8_t *tmpBuff = active_buffer;
+			osKernelLock();  // Disable context switching
+			active_buffer = write_buffer;
+			write_buffer = tmpBuff;
 
-                writeBufferLen = activeBufferPos;
-                activeBufferPos = 0;
-                swapBuff = false;
-                writeYes = true;
-                osKernelUnlock();  // Enable context switching
-            }
+			writeBufferLen = activeBufferPos;
+			activeBufferPos = 0;
+			swapBuff = false;
+			writeYes = true;
+			osKernelUnlock();  // Enable context switching
+		}
 
-
-        if (pcnt % 16 == 0) {
-            pcnt = pcnt % 16;
-        }
-        pcnt++;
-    }
+		if (pcnt % 16 == 0) {
+			pcnt = pcnt % 16;
+		}
+		pcnt++;
+	}
+  /* USER CODE END SensorDataTask */
 }
 
-
-void MountSDCardTask(void *argument) {
-    // Mount the filesystem
-    res = f_mount(&SDFatFS, (TCHAR const*)SDPath, 1);
-      if(res != FR_OK)
-      	{
-      		Error_Handler();
-      	}
-      	else
-      	{
-      		//Open file for writing (Create)
-      		res = f_open(&SDFile, timestamp, FA_CREATE_ALWAYS | FA_WRITE);
-      		if(res != FR_OK)
-      		{
-      			Error_Handler();
-      		}
-      		else
-      		{
-      			f_close(&SDFile);
-      		}
-
-      	}
-
-      	/*if(readTemp)
-      	{
-      		taskENTER_CRITICAL();
-      		engineTemperature = DS18B20_read_temp_celsius(&temp_sensor);
-      		readTemp = false;
-      		taskEXIT_CRITICAL();
-      	}*/
-        if (HAL_TIM_Base_Start_IT(&htim3) != HAL_OK)
-        {
-    		Error_Handler();
-    	}
-
-    vTaskDelete(NULL);
-}
-
-void StartTempTask(void *argument) {
-    uint8_t presence;
-    uint8_t temp_lsb, temp_msb;
-    int16_t temp;
-
-    for (;;) {
-        // Reset pulse
-    	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        presence = OneWire_Reset();
-        if (presence) {
-            // Send the commands to read the temperature
-            OneWire_WriteByte(0xCC);  // Skip ROM
-            OneWire_WriteByte(0x44);  // Start temperature conversion
-
-            vTaskDelay(pdMS_TO_TICKS(750));  // Wait for conversion to complete
-
-            OneWire_Reset();
-            OneWire_WriteByte(0xCC);  // Skip ROM
-            OneWire_WriteByte(0xBE);  // Read Scratchpad
-
-            temp_lsb = OneWire_ReadByte();  // Read temperature LSB
-            temp_msb = OneWire_ReadByte();  // Read temperature MSB
-
-            // Combine LSB and MSB into a 16-bit value
-            temp = (temp_msb << 8) | temp_lsb;
-
-            // Convert the temperature to Celsius
-            engineTemperature = temp;
-        }
-    }
-}
-/* USER CODE END 4 */
-
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartTempTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+* @brief Function implementing the MeasureTempTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTempTask */
+void StartTempTask(void *argument)
 {
-  /* USER CODE BEGIN 5 */
+  /* USER CODE BEGIN StartTempTask */
+
+    short mappedEngineTemp;
+  /* Infinite loop */
   for(;;)
   {
-    osDelay(100);
+	  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+	  //taskENTER_CRITICAL();
+	  osKernelLock();
+      engineTemperature = DS18B20_read_temp(&temp_sensor);
+	  osKernelUnlock();
+	  //taskEXIT_CRITICAL();
+      mappedEngineTemp = map(engineTemperature, 0, 1920/*(120*16)*/, 0, 600);
+      osMessageQueuePut(engineTempQueueHandle, &mappedEngineTemp, 0, 0);
   }
-  /* USER CODE END 5 */
+  /* USER CODE END StartTempTask */
 }
 
  /* MPU Configuration */

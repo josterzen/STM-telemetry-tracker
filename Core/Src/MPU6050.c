@@ -55,15 +55,11 @@ void MPU6050_Initialization(void)
 	MPU6050_Readbyte(MPU6050_WHO_AM_I, &who_am_i);
 	if(who_am_i == 0x68)
 	{
-		//printf("MPU6050 who_am_i = 0x%02x...OK\n", who_am_i);
 	}
 	else
 	{
-		//printf("ERROR!\n");
-		//printf("MPU6050 who_am_i : 0x%02x should be 0x68\n", who_am_i);
 		while(1)
 		{
-			//printf("who am i error. Can not recognize mpu6050\n");
 			HAL_Delay(100);
 		}
 	}
@@ -96,7 +92,7 @@ void MPU6050_Initialization(void)
 	  2		+-1000 degree/s
 	  3		+-2000 degree/s	*/
 	uint8_t FS_SCALE_GYRO = 0x0;
-	MPU6050_Writebyte(MPU6050_GYRO_CONFIG, FS_SCALE_GYRO<<0);
+	MPU6050_Writebyte(MPU6050_GYRO_CONFIG, FS_SCALE_GYRO<<3);
 	HAL_Delay(50);
 
 	//ACCEL FULL SCALE setting
@@ -105,12 +101,11 @@ void MPU6050_Initialization(void)
 	  1		+-4g
 	  2		+-8g
 	  3		+-16g	*/
-	uint8_t FS_SCALE_ACC = 0x0;
-	MPU6050_Writebyte(MPU6050_ACCEL_CONFIG, FS_SCALE_ACC<<2);
+	uint8_t FS_SCALE_ACC = 0x2;
+	MPU6050_Writebyte(MPU6050_ACCEL_CONFIG, FS_SCALE_ACC<<3);
 	HAL_Delay(50);
 
 	MPU6050_Get_LSB_Sensitivity(FS_SCALE_GYRO, FS_SCALE_ACC);
-	//printf("LSB_Sensitivity_GYRO: %f, LSB_Sensitivity_ACC: %f\n",LSB_Sensitivity_GYRO, LSB_Sensitivity_ACC);
 
 	//Interrupt PIN setting
 	uint8_t INT_LEVEL = 0x0; //0 - active high, 1 - active low
@@ -123,8 +118,6 @@ void MPU6050_Initialization(void)
 	uint8_t DATA_RDY_EN = 0x1; // 1 - enable, 0 - disable
 	MPU6050_Writebyte(MPU6050_INT_ENABLE, DATA_RDY_EN);
 	HAL_Delay(50);
-
-	printf("MPU6050 setting is finished\n");
 }
 /*Get Raw Data from sensor*/
 void MPU6050_Get6AxisRawData(Struct_MPU6050* mpu6050)
@@ -132,15 +125,15 @@ void MPU6050_Get6AxisRawData(Struct_MPU6050* mpu6050)
 	uint8_t data[14];
 	MPU6050_Readbytes(MPU6050_ACCEL_XOUT_H, 14, data);
 
-	mpu6050->acc_x_raw = ((data[0] << 8) | data[1]) -4300;
-	mpu6050->acc_y_raw = ((data[2] << 8) | data[3]) +90;
-	mpu6050->acc_z_raw = (data[4] << 8) | data[5];
+	mpu6050->acc_x_raw = (((data[0] << 8) | data[1]) - 3152);
+	mpu6050->acc_y_raw = (((data[2] << 8) | data[3]) - 20);
+	mpu6050->acc_z_raw = (((data[4] << 8) | data[5]) - 310);
 
 	mpu6050->temperature_raw = (data[6] << 8) | data[7];
 
-	mpu6050->gyro_x_raw = ((data[8] << 8) | data[9]) -1500;
-	mpu6050->gyro_y_raw = ((data[10] << 8) | data[11]) +30;
-	mpu6050->gyro_z_raw = ((data[12] << 8) | data[13]);
+	mpu6050->gyro_x_raw = (((data[8] << 8) | data[9]) + 500);
+	mpu6050->gyro_y_raw = (((data[10] << 8) | data[11]) - 500);
+	mpu6050->gyro_z_raw = (((data[12] << 8) | data[13]) + 10);
 }
 
 void MPU6050_Get_LSB_Sensitivity(uint8_t FS_SCALE_GYRO, uint8_t FS_SCALE_ACC)

@@ -42,12 +42,12 @@
 		<link>
 			<name>Application/User/MPU6050.c</name>
 			<type>1</type>
-			<location>C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/MPU6050.c</location>
+			<location>C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/gyro-disco/STM-telemetry-tracker/Core/Src/MPU6050.c</location>
 		</link>
 		<link>
 			<name>Application/User/ds18b20.c</name>
 			<type>1</type>
-			<location>C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/GFXGyro/Core/Src/ds18b20.c</location>
+			<location>C:/Users/Bowl/STM32CubeIDE/workspace_1.16.0/gyro-disco/STM-telemetry-tracker/Core/Src/ds18b20.c</location>
 		</link>
 		<link>
 			<name>Application/User/freertos.c</name>

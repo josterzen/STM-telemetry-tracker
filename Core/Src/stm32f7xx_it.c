@@ -46,7 +46,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-uint8_t tim3cnt_iter = 0;
+uint16_t tim3cnt_iter = 0;
 
 /* USER CODE END PV */
 
@@ -75,7 +75,7 @@ extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 extern bool readTemp;
 extern bool printToWB;
-extern osThreadId_t sensorTaskHandle;
+extern osThreadId_t measureSensorHandle;
 extern osThreadId_t measureTempHandle;
 /* USER CODE END EV */
 
@@ -90,7 +90,6 @@ void NMI_Handler(void)
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
-  HAL_RCC_NMI_IRQHandler();
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
 
   /* USER CODE END NonMaskableInt_IRQn 1 */
@@ -185,12 +184,11 @@ void TIM3_IRQHandler(void)
 
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
-
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  vTaskNotifyGiveFromISR(sensorTaskHandle, &xHigherPriorityTaskWoken);
-  if(tim3cnt_iter%100 == 0)
+  vTaskNotifyGiveFromISR(measureSensorHandle, &xHigherPriorityTaskWoken);
+  if(tim3cnt_iter%200 == 0)
   {
       vTaskNotifyGiveFromISR(measureTempHandle, &xHigherPriorityTaskWoken);
 	  tim3cnt_iter = 0;
