@@ -40,6 +40,16 @@
 			<locationURI>$%7BPARENT-1-PROJECT_LOC%7D/STM32F769I_DISCO.ioc</locationURI>
 		</link>
 		<link>
+			<name>Application/User/MPU6050.c</name>
+			<type>1</type>
+			<locationURI>$%7BPARENT-1-PROJECT_LOC%7D/Core/Src/MPU6050.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/ds18b20.c</name>
+			<type>1</type>
+			<locationURI>$%7BPARENT-1-PROJECT_LOC%7D/Core/Src/ds18b20.c</locationURI>
+		</link>
+		<link>
 			<name>Application/User/freertos.c</name>
 			<type>1</type>
 			<locationURI>$%7BPARENT-1-PROJECT_LOC%7D/Core/Src/freertos.c</locationURI>
