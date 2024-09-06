@@ -75,7 +75,7 @@ extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 extern osThreadId_t measureSensorHandle;
 extern osThreadId_t measureTempHandle;
-extern uint16_t pulseCount;
+extern osThreadId_t measureRPMHandle;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -175,6 +175,20 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
+  * @brief This function handles EXTI line[9:5] interrupts.
+  */
+void EXTI9_5_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+
+  /* USER CODE END EXTI9_5_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+
+  /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
@@ -185,14 +199,13 @@ void TIM3_IRQHandler(void)
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  vTaskNotifyGiveFromISR(measureSensorHandle, &xHigherPriorityTaskWoken);
-  if(tim3cnt_iter%200 == 0)
-  {
-      vTaskNotifyGiveFromISR(measureTempHandle, &xHigherPriorityTaskWoken);
-	  tim3cnt_iter = 0;
-  }
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	vTaskNotifyGiveFromISR(measureSensorHandle, &xHigherPriorityTaskWoken);
+	if (tim3cnt_iter % 100 == 0) {
+		vTaskNotifyGiveFromISR(measureTempHandle, &xHigherPriorityTaskWoken);
+		tim3cnt_iter = 0;
+	}
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   tim3cnt_iter +=1;
 
   /* USER CODE END TIM3_IRQn 1 */
@@ -326,12 +339,12 @@ void SDMMC2_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    if (GPIO_Pin == GPIO_PIN_8)
-    {
-        pulseCount++;
-    }
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (GPIO_Pin == GPIO_PIN_8)  // PC8 EXTI Line
+	{
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+		vTaskNotifyGiveFromISR(measureRPMHandle, &xHigherPriorityTaskWoken);
+	}
 }
 
 /* USER CODE END 1 */

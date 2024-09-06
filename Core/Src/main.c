@@ -105,6 +105,7 @@ SD_HandleTypeDef hsd2;
 DMA_HandleTypeDef hdma_sdmmc2_rx;
 DMA_HandleTypeDef hdma_sdmmc2_tx;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim7;
 
@@ -152,6 +153,13 @@ const osThreadAttr_t measureTemp_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
+/* Definitions for measureRPM */
+osThreadId_t measureRPMHandle;
+const osThreadAttr_t measureRPM_attributes = {
+  .name = "measureRPM",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for gyroYqueue */
 osMessageQueueId_t gyroYqueueHandle;
 const osMessageQueueAttr_t gyroYqueue_attributes = {
@@ -192,10 +200,9 @@ int writeBufferLen = 0;  // Length of the write buffer
 uint8_t rtext[_MAX_SS];/* File read buffer */
 char timestamp[32];
 bool writeYes = false;
-uint16_t engineTemperature;
-uint32_t milliseconds = 0;
-uint16_t pulseCount = 0;
-uint16_t engineRpm = 0;
+volatile uint16_t engineTemperature;
+volatile uint32_t milliseconds = 0;
+volatile uint32_t engineRpm = 0;
 RTC_TimeTypeDef sTime = {0};
 RTC_DateTypeDef sDate = {0};
 bool swapBuff = false;
@@ -219,12 +226,14 @@ static void MX_I2C1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_RTC_Init(void);
+static void MX_TIM2_Init(void);
 void StartDefaultTask(void *argument);
 extern void TouchGFX_Task(void *argument);
 extern void videoTaskFunc(void *argument);
 void MountSDCardTask(void *argument);
 void SensorDataTask(void *argument);
 void StartTempTask(void *argument);
+void MeasureRPMTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 static void BSP_SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_CommandTypeDef *Command);
@@ -263,11 +272,6 @@ int main(void)
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
 
-  /* Enable the CPU Cache */
-
-  /* Enable I-Cache---------------------------------------------------------*/
-  SCB_EnableICache();
-
   /* Enable D-Cache---------------------------------------------------------*/
   SCB_EnableDCache();
 
@@ -304,6 +308,7 @@ int main(void)
   MX_TIM7_Init();
   MX_FATFS_Init();
   MX_RTC_Init();
+  MX_TIM2_Init();
   MX_TouchGFX_Init();
   /* Call PreOsInit function */
   MX_TouchGFX_PreOSInit();
@@ -370,6 +375,9 @@ int main(void)
   /* creation of measureTemp */
   measureTempHandle = osThreadNew(StartTempTask, NULL, &measureTemp_attributes);
 
+  /* creation of measureRPM */
+  measureRPMHandle = osThreadNew(MeasureRPMTask, NULL, &measureRPM_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -407,7 +415,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -439,11 +447,11 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
   {
     Error_Handler();
   }
@@ -975,6 +983,51 @@ static void MX_SDMMC2_SD_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 108-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 4294967295;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief TIM3 Initialization Function
   * @param None
   * @retval None
@@ -1156,7 +1209,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(DSI_RESET_GPIO_Port, DSI_RESET_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8|RENDER_TIME_Pin|VSYNC_FREQ_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, RENDER_TIME_Pin|VSYNC_FREQ_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(MCU_ACTIVE_GPIO_Port, MCU_ACTIVE_Pin, GPIO_PIN_RESET);
@@ -1179,9 +1232,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PC8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RENDER_TIME_Pin VSYNC_FREQ_Pin */
@@ -1211,13 +1263,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(FRAME_RATE_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB14 */
-  GPIO_InitStruct.Pin = GPIO_PIN_14;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF4_USART1;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -1905,6 +1953,9 @@ void MountSDCardTask(void *argument)
 		Error_Handler();
 	}
 
+	if (HAL_TIM_Base_Start(&htim2) != HAL_OK) {
+			Error_Handler();
+	}
 	vTaskDelete(NULL);
 
 	for (;;) {
@@ -1925,7 +1976,6 @@ void SensorDataTask(void *argument)
 {
   /* USER CODE BEGIN SensorDataTask */
 
-	short mappedEngineRPM;
 	short mappedGyroY;
 	short mappedAccY;
 	short mappedAccX;
@@ -1933,19 +1983,18 @@ void SensorDataTask(void *argument)
 	for (;;) {
 
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		engineRpm = pulseCount * 60 * 100;
-		pulseCount = 0;
+
 		if (MPU6050_DataReady() == 1) {
+			taskENTER_CRITICAL();
 			MPU6050_ProcessData(&MPU6050);
+			taskEXIT_CRITICAL();
 		}
 
 
-		mappedEngineRPM = map(engineRpm, 0, 8096, 0, 600);
 		mappedGyroY = map(MPU6050.gyro_x_raw, -32768, 32768, -300, 300);
 		mappedAccY = map(MPU6050.acc_y_raw, -32768, 32768, -300, 300);
 		mappedAccX = map(MPU6050.acc_x_raw, -32768, 32768, -300, 300);
 
-		osMessageQueuePut(engineRPMqueueHandle, &mappedEngineRPM, 0, 0);
 		osMessageQueuePut(gyroYqueueHandle, &mappedGyroY, 0, 0);
 		osMessageQueuePut(accYqueueHandle, &mappedAccX, 0, 0);
 		osMessageQueuePut(accXqueueHandle, &mappedAccY, 0, 0);
@@ -2040,6 +2089,48 @@ void StartTempTask(void *argument)
       osMessageQueuePut(engineTempQueueHandle, &mappedEngineTemp, 0, 0);
   }
   /* USER CODE END StartTempTask */
+}
+
+/* USER CODE BEGIN Header_MeasureRPMTask */
+/**
+* @brief Function implementing the measureRPM thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_MeasureRPMTask */
+void MeasureRPMTask(void *argument)
+{
+  /* USER CODE BEGIN MeasureRPMTask */
+	short mappedEngineRPM;
+	volatile uint32_t lastTimestamp = 0;
+	volatile uint32_t rpmMeasurements[5] = {0};
+	volatile uint8_t rpmIndex = 0;
+	/* Infinite loop */
+  for(;;)
+  {
+	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+	uint32_t currentTimestamp = __HAL_TIM_GET_COUNTER(&htim2);
+	uint32_t timeDifference = currentTimestamp - lastTimestamp;
+	lastTimestamp = currentTimestamp;
+
+	if(timeDifference > 4096)
+	{
+
+		uint32_t curr_rpm  = (60 * 200000 /*(1000000 /5)*/) / timeDifference;
+		rpmMeasurements[rpmIndex] = curr_rpm;
+		rpmIndex++;
+		rpmIndex = rpmIndex%5;
+		engineRpm = 0;
+		for(uint8_t  i=0; i<5; i++)
+		{
+			engineRpm+=rpmMeasurements[i];
+		}
+		mappedEngineRPM = map(engineRpm, 0, 8096, 0, 600);
+		osMessageQueuePut(engineRPMqueueHandle, &mappedEngineRPM, 0, 0);
+	}
+
+  }
+  /* USER CODE END MeasureRPMTask */
 }
 
  /* MPU Configuration */
