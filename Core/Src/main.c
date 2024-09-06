@@ -160,6 +160,13 @@ const osThreadAttr_t measureRPM_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for setRPMZero */
+osThreadId_t setRPMZeroHandle;
+const osThreadAttr_t setRPMZero_attributes = {
+  .name = "setRPMZero",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for gyroYqueue */
 osMessageQueueId_t gyroYqueueHandle;
 const osMessageQueueAttr_t gyroYqueue_attributes = {
@@ -203,6 +210,7 @@ bool writeYes = false;
 volatile uint16_t engineTemperature;
 volatile uint32_t milliseconds = 0;
 volatile uint32_t engineRpm = 0;
+volatile uint32_t rpmMeasurements[3] = {0};
 RTC_TimeTypeDef sTime = {0};
 RTC_DateTypeDef sDate = {0};
 bool swapBuff = false;
@@ -234,6 +242,7 @@ void MountSDCardTask(void *argument);
 void SensorDataTask(void *argument);
 void StartTempTask(void *argument);
 void MeasureRPMTask(void *argument);
+void SetRPMZero(void *argument);
 
 /* USER CODE BEGIN PFP */
 static void BSP_SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_CommandTypeDef *Command);
@@ -377,6 +386,9 @@ int main(void)
 
   /* creation of measureRPM */
   measureRPMHandle = osThreadNew(MeasureRPMTask, NULL, &measureRPM_attributes);
+
+  /* creation of setRPMZero */
+  setRPMZeroHandle = osThreadNew(SetRPMZero, NULL, &setRPMZero_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -1003,7 +1015,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 108-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
+  htim2.Init.Period = 500000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -2103,7 +2115,6 @@ void MeasureRPMTask(void *argument)
   /* USER CODE BEGIN MeasureRPMTask */
 	short mappedEngineRPM;
 	volatile uint32_t lastTimestamp = 0;
-	volatile uint32_t rpmMeasurements[5] = {0};
 	volatile uint8_t rpmIndex = 0;
 	/* Infinite loop */
   for(;;)
@@ -2119,9 +2130,9 @@ void MeasureRPMTask(void *argument)
 		uint32_t curr_rpm  = (60 * 200000 /*(1000000 /5)*/) / timeDifference;
 		rpmMeasurements[rpmIndex] = curr_rpm;
 		rpmIndex++;
-		rpmIndex = rpmIndex%5;
+		rpmIndex = rpmIndex%3;
 		engineRpm = 0;
-		for(uint8_t  i=0; i<5; i++)
+		for(uint8_t  i=0; i<3; i++)
 		{
 			engineRpm+=rpmMeasurements[i];
 		}
@@ -2131,6 +2142,26 @@ void MeasureRPMTask(void *argument)
 
   }
   /* USER CODE END MeasureRPMTask */
+}
+
+/* USER CODE BEGIN Header_SetRPMZero */
+/**
+* @brief Function implementing the setRPMZero thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_SetRPMZero */
+void SetRPMZero(void *argument)
+{
+  /* USER CODE BEGIN SetRPMZero */
+  /* Infinite loop */
+  for(;;)
+  {
+	  memset(rpmMeasurements, 0, 3);
+	  engineRpm = 0;
+	  osMessageQueuePut(engineRPMqueueHandle, 0, 0, 0);
+  }
+  /* USER CODE END SetRPMZero */
 }
 
  /* MPU Configuration */

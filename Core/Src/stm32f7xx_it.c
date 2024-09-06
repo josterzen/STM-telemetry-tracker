@@ -68,6 +68,7 @@ extern LTDC_HandleTypeDef hltdc;
 extern DMA_HandleTypeDef hdma_sdmmc2_rx;
 extern DMA_HandleTypeDef hdma_sdmmc2_tx;
 extern SD_HandleTypeDef hsd2;
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim6;
@@ -76,6 +77,7 @@ extern TIM_HandleTypeDef htim6;
 extern osThreadId_t measureSensorHandle;
 extern osThreadId_t measureTempHandle;
 extern osThreadId_t measureRPMHandle;
+extern osThreadId_t setRPMZeroHandle;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -186,6 +188,21 @@ void EXTI9_5_IRQHandler(void)
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 
   /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	vTaskNotifyGiveFromISR(setRPMZeroHandle, &xHigherPriorityTaskWoken);
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**
