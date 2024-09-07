@@ -2001,7 +2001,7 @@ void SensorDataTask(void *argument)
 		}
 
 
-		mappedGyroY = map(MPU6050.gyro_x_raw, -32768, 32768, -300, 300);
+		mappedGyroY = map(MPU6050.gyro_y_raw, -32768, 32768, -300, 300);
 		mappedAccY = map(MPU6050.acc_y_raw, -32768, 32768, -300, 300);
 		mappedAccX = map(MPU6050.acc_x_raw, -32768, 32768, -300, 300);
 
@@ -2112,7 +2112,6 @@ void MeasureRPMTask(void *argument)
 {
   /* USER CODE BEGIN MeasureRPMTask */
 	short mappedEngineRPM;
-	volatile uint32_t lastTimestamp = 0;
 	volatile uint8_t rpmIndex = 0;
 	/* Infinite loop */
   for(;;)
