@@ -1015,7 +1015,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 108-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 500000;
+  htim2.Init.Period = 1000000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -1965,7 +1965,7 @@ void MountSDCardTask(void *argument)
 		Error_Handler();
 	}
 
-	if (HAL_TIM_Base_Start(&htim2) != HAL_OK) {
+	if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK) {
 			Error_Handler();
 	}
 	vTaskDelete(NULL);
@@ -1997,9 +1997,7 @@ void SensorDataTask(void *argument)
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 		if (MPU6050_DataReady() == 1) {
-			taskENTER_CRITICAL();
 			MPU6050_ProcessData(&MPU6050);
-			taskEXIT_CRITICAL();
 		}
 
 
@@ -2020,7 +2018,7 @@ void SensorDataTask(void *argument)
 				/ (hrtc.Init.SynchPrediv + 1);
 
 		int wtext_len = snprintf((char*) &wtext, WTEXT_SIZE,
-				"%02u\t%02u\t%02u\t%03lu\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%u\n",
+				"%02u\t%02u\t%02u\t%03lu\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lu\n",
 				sTime.Hours, sTime.Minutes, sTime.Seconds, milliseconds,
 				MPU6050.acc_x_raw, MPU6050.acc_y_raw, MPU6050.acc_z_raw,
 				MPU6050.temperature_raw, MPU6050.gyro_x_raw, MPU6050.gyro_y_raw,
@@ -2121,13 +2119,12 @@ void MeasureRPMTask(void *argument)
   {
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 	uint32_t currentTimestamp = __HAL_TIM_GET_COUNTER(&htim2);
-	uint32_t timeDifference = currentTimestamp - lastTimestamp;
-	lastTimestamp = currentTimestamp;
+    __HAL_TIM_SET_COUNTER(&htim2, 0);
 
-	if(timeDifference > 4096)
+	if(currentTimestamp > 4096)
 	{
 
-		uint32_t curr_rpm  = (60 * 200000 /*(1000000 /5)*/) / timeDifference;
+		uint32_t curr_rpm  = (60 * 200000 /*(1000000 /5)*/) / currentTimestamp;
 		rpmMeasurements[rpmIndex] = curr_rpm;
 		rpmIndex++;
 		rpmIndex = rpmIndex%3;
@@ -2154,13 +2151,16 @@ void MeasureRPMTask(void *argument)
 void SetRPMZero(void *argument)
 {
   /* USER CODE BEGIN SetRPMZero */
-  /* Infinite loop */
-  for(;;)
-  {
-	  memset(rpmMeasurements, 0, 3);
-	  engineRpm = 0;
-	  osMessageQueuePut(engineRPMqueueHandle, 0, 0, 0);
-  }
+	short zeroVal = 0;
+	/* Infinite loop */
+	for (;;) {
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		for (uint8_t i = 0; i < 3; i++) {
+			rpmMeasurements[i] = 0;
+		}
+		engineRpm = 0;
+		osMessageQueuePut(engineRPMqueueHandle, &zeroVal, 0, 0);
+	}
   /* USER CODE END SetRPMZero */
 }
 
