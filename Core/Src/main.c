@@ -213,7 +213,6 @@ volatile uint32_t engineRpm = 0;
 volatile uint32_t rpmMeasurements[3] = {0};
 RTC_TimeTypeDef sTime = {0};
 RTC_DateTypeDef sDate = {0};
-bool swapBuff = false;
 uint8_t pcnt = 0;
 
 /* USER CODE END PV */
@@ -2029,9 +2028,6 @@ void SensorDataTask(void *argument)
 			Error_Handler();
 		}
 
-		if ((activeBufferPos + wtext_len + 256) >= BUFFER_SIZE) {
-			swapBuff = true;
-		}
 		memcpy(&active_buffer[activeBufferPos], &wtext, wtext_len);
 		activeBufferPos += wtext_len;
 		memset(&wtext, 0, WTEXT_SIZE);
@@ -2065,7 +2061,6 @@ void SensorDataTask(void *argument)
 
 			writeBufferLen = activeBufferPos;
 			activeBufferPos = 0;
-			swapBuff = false;
 			writeYes = true;
 			osKernelUnlock();  // Enable context switching
 		}

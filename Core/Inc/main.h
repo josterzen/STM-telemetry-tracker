@@ -74,7 +74,7 @@ void MX_I2C4_Init(void);
 
 /* USER CODE BEGIN Private defines */
 
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 256
 #define WTEXT_SIZE 256
 
 /* USER CODE END Private defines */
