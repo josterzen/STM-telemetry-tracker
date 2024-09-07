@@ -2011,7 +2011,7 @@ void SensorDataTask(void *argument)
 
 
 
-		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD);
+		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 		HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
 
 		milliseconds = ((hrtc.Init.SynchPrediv - sTime.SubSeconds) * 1000)
