@@ -2071,11 +2071,6 @@ void SensorDataTask(void *argument)
 			writeYes = true;
 			osKernelUnlock();  // Enable context switching
 		}
-
-		if (pcnt % 16 == 0) {
-			pcnt = pcnt % 16;
-		}
-		pcnt++;
 	}
   /* USER CODE END SensorDataTask */
 }
